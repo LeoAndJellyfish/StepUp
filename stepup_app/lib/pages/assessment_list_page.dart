@@ -48,6 +48,15 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
   void initState() {
     super.initState();
     _loadData();
+    // 监听评估条目变更事件，自动刷新数据
+    _eventBus.on(AppEvent.assessmentItemChanged, _loadData);
+  }
+
+  @override
+  void dispose() {
+    // 移除事件监听
+    _eventBus.off(AppEvent.assessmentItemChanged, _loadData);
+    super.dispose();
   }
 
   Future<void> _loadData() async {
