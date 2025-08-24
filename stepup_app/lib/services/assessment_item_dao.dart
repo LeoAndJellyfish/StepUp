@@ -7,6 +7,11 @@ class AssessmentItemDao {
   // 获取所有综测条目
   Future<List<AssessmentItem>> getAllItems({
     int? categoryId,
+    int? subcategoryId,
+    int? levelId,
+    bool? isAwarded,
+    bool? isCollective,
+    bool? isLeader,
     DateTime? startDate,
     DateTime? endDate,
     String orderBy = 'created_at DESC',
@@ -19,6 +24,31 @@ class AssessmentItemDao {
     if (categoryId != null) {
       whereClauses.add('category_id = ?');
       whereArgs.add(categoryId);
+    }
+
+    if (subcategoryId != null) {
+      whereClauses.add('subcategory_id = ?');
+      whereArgs.add(subcategoryId);
+    }
+
+    if (levelId != null) {
+      whereClauses.add('level_id = ?');
+      whereArgs.add(levelId);
+    }
+
+    if (isAwarded != null) {
+      whereClauses.add('is_awarded = ?');
+      whereArgs.add(isAwarded ? 1 : 0);
+    }
+
+    if (isCollective != null) {
+      whereClauses.add('is_collective = ?');
+      whereArgs.add(isCollective ? 1 : 0);
+    }
+
+    if (isLeader != null) {
+      whereClauses.add('is_leader = ?');
+      whereArgs.add(isLeader ? 1 : 0);
     }
 
     if (startDate != null) {

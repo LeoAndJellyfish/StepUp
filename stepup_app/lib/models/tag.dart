@@ -1,32 +1,26 @@
-// 分类模型类
-class Category {
+// 标签模型类
+class Tag {
   final int? id;
   final String name;
   final String code;
-  final String description;
-  final String color; // 存储颜色值，如 "#FF5722"
-  final String icon; // 图标名称或编码
+  final String? description;
   final DateTime createdAt;
 
-  const Category({
+  const Tag({
     this.id,
     required this.name,
     required this.code,
-    required this.description,
-    required this.color,
-    required this.icon,
+    this.description,
     required this.createdAt,
   });
 
-  // 从数据库Map创建Category对象
-  factory Category.fromMap(Map<String, dynamic> map) {
-    return Category(
+  // 从数据库Map创建Tag对象
+  factory Tag.fromMap(Map<String, dynamic> map) {
+    return Tag(
       id: map['id']?.toInt(),
       name: map['name'] ?? '',
       code: map['code'] ?? '',
-      description: map['description'] ?? '',
-      color: map['color'] ?? '#2196F3',
-      icon: map['icon'] ?? 'category',
+      description: map['description'],
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at']),
     );
   }
@@ -38,57 +32,45 @@ class Category {
       'name': name,
       'code': code,
       'description': description,
-      'color': color,
-      'icon': icon,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
 
   // 复制并更新部分字段
-  Category copyWith({
+  Tag copyWith({
     int? id,
     String? name,
     String? code,
     String? description,
-    String? color,
-    String? icon,
     DateTime? createdAt,
   }) {
-    return Category(
+    return Tag(
       id: id ?? this.id,
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name, code: $code, description: $description, color: $color, icon: $icon)';
+    return 'Tag(id: $id, name: $name, code: $code)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Category &&
+    return other is Tag &&
         other.id == id &&
         other.name == name &&
-        other.code == code &&
-        other.description == description &&
-        other.color == color &&
-        other.icon == icon;
+        other.code == code;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
         name.hashCode ^
-        code.hashCode ^
-        description.hashCode ^
-        color.hashCode ^
-        icon.hashCode;
+        code.hashCode;
   }
 }

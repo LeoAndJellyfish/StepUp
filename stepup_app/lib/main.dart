@@ -28,7 +28,7 @@ void main() async {
   
   // 初始化数据库
   final databaseHelper = DatabaseHelper();
-  await databaseHelper.database; // 这会触发数据库创建
+  await databaseHelper.database; // 这会触发数据库创建或升级
   
   runApp(const MyApp());
 }

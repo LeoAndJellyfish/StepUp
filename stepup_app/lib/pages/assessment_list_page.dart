@@ -4,8 +4,12 @@ import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
 import '../models/assessment_item.dart';
 import '../models/category.dart';
+import '../models/subcategory.dart';
+import '../models/level.dart';
 import '../services/assessment_item_dao.dart';
 import '../services/category_dao.dart';
+import '../services/subcategory_dao.dart';
+import '../services/level_dao.dart';
 import '../services/event_bus.dart';
 
 class AssessmentListPage extends StatefulWidget {
@@ -18,13 +22,27 @@ class AssessmentListPage extends StatefulWidget {
 class _AssessmentListPageState extends State<AssessmentListPage> {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
   final CategoryDao _categoryDao = CategoryDao();
+  final SubcategoryDao _subcategoryDao = SubcategoryDao();
+  final LevelDao _levelDao = LevelDao();
   final EventBus _eventBus = EventBus();
   
   List<AssessmentItem> _items = [];
   List<Category> _categories = [];
+  List<Subcategory> _subcategories = [];
+  List<Level> _levels = [];
+  
   bool _isLoading = true;
   String? _error;
+  
+  // 筛选条件
   int? _selectedCategoryId;
+  int? _selectedSubcategoryId;
+  int? _selectedLevelId;
+  bool? _isAwarded; // null表示全部，true表示已获奖，false表示未获奖
+  bool? _isCollective;
+  bool? _isLeader;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -39,14 +57,26 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         _error = null;
       });
 
-      final items = await _assessmentItemDao.getAllItems(
-        categoryId: _selectedCategoryId,
-      );
+      // 加载基础数据
       final categories = await _categoryDao.getAllCategories();
+      final levels = await _levelDao.getAllLevels();
+      
+      // 加载子分类
+      List<Subcategory> subcategories = [];
+      if (_selectedCategoryId != null) {
+        subcategories = await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
+      } else {
+        subcategories = await _subcategoryDao.getAllSubcategories();
+      }
+
+      // 构建筛选条件
+      final items = await _getFilteredItems();
       
       setState(() {
         _items = items;
         _categories = categories;
+        _subcategories = subcategories;
+        _levels = levels;
         _isLoading = false;
       });
     } catch (e) {
@@ -55,6 +85,20 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         _isLoading = false;
       });
     }
+  }
+
+  // 根据筛选条件获取数据
+  Future<List<AssessmentItem>> _getFilteredItems() async {
+    return await _assessmentItemDao.getAllItems(
+      categoryId: _selectedCategoryId,
+      subcategoryId: _selectedSubcategoryId,
+      levelId: _selectedLevelId,
+      isAwarded: _isAwarded,
+      isCollective: _isCollective,
+      isLeader: _isLeader,
+      startDate: _startDate,
+      endDate: _endDate,
+    );
   }
 
   @override
@@ -130,6 +174,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
           (cat) => cat.id == item.categoryId,
           orElse: () => Category(
             name: '未知分类',
+            code: 'UNKNOWN',
             description: '',
             color: '#999999',
             icon: 'help',
@@ -274,28 +319,140 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('筛选条件'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: _selectedCategoryId,
-              decoration: const InputDecoration(labelText: '分类'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('全部')),
-                ..._categories.map((category) => DropdownMenuItem(
-                  value: category.id,
-                  child: Text(category.name),
-                )),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 主分类
+              DropdownButtonFormField<int>(
+                initialValue: _selectedCategoryId,
+                decoration: const InputDecoration(labelText: '主分类'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('全部')),
+                  ..._categories.map((category) => DropdownMenuItem(
+                    value: category.id,
+                    child: Text('${category.name} (${category.code})'),
+                  )),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategoryId = value;
+                    _selectedSubcategoryId = null;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // 子分类
+              if (_subcategories.isNotEmpty) ...[
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedSubcategoryId,
+                  decoration: const InputDecoration(labelText: '子分类'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('全部')),
+                    ..._subcategories.where((sub) => 
+                      _selectedCategoryId == null || sub.categoryId == _selectedCategoryId
+                    ).map((subcategory) => DropdownMenuItem(
+                      value: subcategory.id,
+                      child: Text('${subcategory.name} (${subcategory.code})'),
+                    )),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedSubcategoryId = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategoryId = value;
-                });
-              },
-            ),
-          ],
+              
+              // 活动级别
+              DropdownButtonFormField<int>(
+                initialValue: _selectedLevelId,
+                decoration: const InputDecoration(labelText: '活动级别'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('全部')),
+                  ..._levels.map((level) => DropdownMenuItem(
+                    value: level.id,
+                    child: Text(level.name),
+                  )),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedLevelId = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // 获奖状态
+              DropdownButtonFormField<bool>(
+                initialValue: _isAwarded,
+                decoration: const InputDecoration(labelText: '获奖状态'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('全部')),
+                  DropdownMenuItem(value: true, child: Text('已获奖')),
+                  DropdownMenuItem(value: false, child: Text('未获奖')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _isAwarded = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // 是否代表集体
+              DropdownButtonFormField<bool>(
+                initialValue: _isCollective,
+                decoration: const InputDecoration(labelText: '参加类型'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('全部')),
+                  DropdownMenuItem(value: true, child: Text('代表集体')),
+                  DropdownMenuItem(value: false, child: Text('个人参加')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _isCollective = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // 是否为负责人
+              DropdownButtonFormField<bool>(
+                initialValue: _isLeader,
+                decoration: const InputDecoration(labelText: '担任角色'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('全部')),
+                  DropdownMenuItem(value: true, child: Text('负责人')),
+                  DropdownMenuItem(value: false, child: Text('普通参与者')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _isLeader = value;
+                  });
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedCategoryId = null;
+                _selectedSubcategoryId = null;
+                _selectedLevelId = null;
+                _isAwarded = null;
+                _isCollective = null;
+                _isLeader = null;
+                _startDate = null;
+                _endDate = null;
+              });
+            },
+            child: const Text('清空'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('取消'),

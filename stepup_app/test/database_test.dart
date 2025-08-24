@@ -36,6 +36,7 @@ void main() {
       // 测试添加分类
       final newCategory = Category(
         name: '测试分类',
+        code: 'TEST',
         description: '这是一个测试分类',
         color: '#FF5722',
         icon: 'test',

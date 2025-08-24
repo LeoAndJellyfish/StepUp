@@ -1,32 +1,29 @@
-// 分类模型类
-class Category {
+// 子分类模型类
+class Subcategory {
   final int? id;
+  final int categoryId;
   final String name;
   final String code;
   final String description;
-  final String color; // 存储颜色值，如 "#FF5722"
-  final String icon; // 图标名称或编码
   final DateTime createdAt;
 
-  const Category({
+  const Subcategory({
     this.id,
+    required this.categoryId,
     required this.name,
     required this.code,
     required this.description,
-    required this.color,
-    required this.icon,
     required this.createdAt,
   });
 
-  // 从数据库Map创建Category对象
-  factory Category.fromMap(Map<String, dynamic> map) {
-    return Category(
+  // 从数据库Map创建Subcategory对象
+  factory Subcategory.fromMap(Map<String, dynamic> map) {
+    return Subcategory(
       id: map['id']?.toInt(),
+      categoryId: map['category_id']?.toInt() ?? 0,
       name: map['name'] ?? '',
       code: map['code'] ?? '',
       description: map['description'] ?? '',
-      color: map['color'] ?? '#2196F3',
-      icon: map['icon'] ?? 'category',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at']),
     );
   }
@@ -35,60 +32,53 @@ class Category {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'category_id': categoryId,
       'name': name,
       'code': code,
       'description': description,
-      'color': color,
-      'icon': icon,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
 
   // 复制并更新部分字段
-  Category copyWith({
+  Subcategory copyWith({
     int? id,
+    int? categoryId,
     String? name,
     String? code,
     String? description,
-    String? color,
-    String? icon,
     DateTime? createdAt,
   }) {
-    return Category(
+    return Subcategory(
       id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name, code: $code, description: $description, color: $color, icon: $icon)';
+    return 'Subcategory(id: $id, categoryId: $categoryId, name: $name, code: $code)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Category &&
+    return other is Subcategory &&
         other.id == id &&
+        other.categoryId == categoryId &&
         other.name == name &&
-        other.code == code &&
-        other.description == description &&
-        other.color == color &&
-        other.icon == icon;
+        other.code == code;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
+        categoryId.hashCode ^
         name.hashCode ^
-        code.hashCode ^
-        description.hashCode ^
-        color.hashCode ^
-        icon.hashCode;
+        code.hashCode;
   }
 }
