@@ -167,35 +167,40 @@ class _HomePageState extends State<HomePage> {
           style: AppTheme.titleLarge,
         ),
         const SizedBox(height: AppTheme.spacing12),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 1.5,
-          mainAxisSpacing: AppTheme.spacing12,
-          crossAxisSpacing: AppTheme.spacing12,
-          children: [
-            StatsCard(
-              title: '总条目',
-              value: '${stats['totalCount'] ?? 0}',
-              icon: Icons.assignment,
-              color: Colors.blue,
-              onTap: () => context.go('/assessment'),
-            ),
-            StatsCard(
-              title: '总积分',
-              value: '${(stats['totalScore'] ?? 0.0).toStringAsFixed(1)}',
-              icon: Icons.star,
-              color: Colors.orange,
-              onTap: () => context.go('/statistics'),
-            ),
-            StatsCard(
-              title: '总时长',
-              value: '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h',
-              icon: Icons.access_time,
-              color: Colors.green,
-            ),
-          ],
+        SizedBox(
+          height: 120, // 固定高度以防止溢出
+          child: Row(
+            children: [
+              Expanded(
+                child: StatsCard(
+                  title: '总条目',
+                  value: '${stats['totalCount'] ?? 0}',
+                  icon: Icons.assignment,
+                  color: Colors.blue,
+                  onTap: () => context.go('/assessment'),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing8),
+              Expanded(
+                child: StatsCard(
+                  title: '总积分',
+                  value: '${(stats['totalScore'] ?? 0.0).toStringAsFixed(1)}',
+                  icon: Icons.star,
+                  color: Colors.orange,
+                  onTap: () => context.go('/statistics'),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing8),
+              Expanded(
+                child: StatsCard(
+                  title: '总时长',
+                  value: '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h',
+                  icon: Icons.access_time,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

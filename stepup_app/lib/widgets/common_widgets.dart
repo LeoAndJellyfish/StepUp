@@ -184,39 +184,46 @@ class StatsCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spacing16),
+          padding: const EdgeInsets.all(AppTheme.spacing12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
                   Icon(
                     icon,
                     color: cardColor,
-                    size: 24,
+                    size: 20,
                   ),
                   const Spacer(),
                   if (onTap != null)
                     Icon(
                       Icons.arrow_forward_ios,
-                      size: 16,
+                      size: 12,
                       color: theme.colorScheme.outline,
                     ),
                 ],
               ),
-              const SizedBox(height: AppTheme.spacing12),
-              Text(
-                value,
-                style: AppTheme.headlineMedium.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: AppTheme.spacing8),
+              Flexible(
+                child: Text(
+                  value,
+                  style: AppTheme.titleLarge.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: AppTheme.spacing4),
-              Text(
-                title,
-                style: AppTheme.bodyMedium.copyWith(
-                  color: theme.colorScheme.outline,
+              Flexible(
+                child: Text(
+                  title,
+                  style: AppTheme.bodySmall.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
