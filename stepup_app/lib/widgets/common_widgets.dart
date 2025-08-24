@@ -7,10 +7,10 @@ class LoadingWidget extends StatelessWidget {
   final double size;
 
   const LoadingWidget({
-    Key? key,
+    super.key,
     this.message,
     this.size = 24.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +45,12 @@ class EmptyStateWidget extends StatelessWidget {
   final Widget? action;
 
   const EmptyStateWidget({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     this.subtitle,
     this.action,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,11 +103,11 @@ class ErrorStateWidget extends StatelessWidget {
   final VoidCallback? onRetry;
 
   const ErrorStateWidget({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.onRetry,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +166,13 @@ class StatsCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const StatsCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     this.color,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -241,11 +241,11 @@ class ScoreDisplay extends StatelessWidget {
   final bool showProgress;
 
   const ScoreDisplay({
-    Key? key,
+    super.key,
     required this.score,
     this.maxScore,
     this.showProgress = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,11 +299,11 @@ class CustomDivider extends StatelessWidget {
   final Color? color;
 
   const CustomDivider({
-    Key? key,
+    super.key,
     this.height,
     this.thickness,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -326,13 +326,13 @@ class CustomFAB extends StatelessWidget {
   final String? label;
 
   const CustomFAB({
-    Key? key,
+    super.key,
     required this.onPressed,
     required this.icon,
     this.tooltip,
     this.isExtended = false,
     this.label,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -363,14 +363,14 @@ class DeleteConfirmDialog extends StatelessWidget {
   final String cancelText;
 
   const DeleteConfirmDialog({
-    Key? key,
+    super.key,
     this.title = '确认删除',
     required this.content,
     required this.onConfirm,
     this.onCancel,
     this.confirmText = '删除',
     this.cancelText = '取消',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

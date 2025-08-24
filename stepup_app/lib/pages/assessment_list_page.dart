@@ -13,7 +13,7 @@ import '../services/level_dao.dart';
 import '../services/event_bus.dart';
 
 class AssessmentListPage extends StatefulWidget {
-  const AssessmentListPage({Key? key}) : super(key: key);
+  const AssessmentListPage({super.key});
 
   @override
   State<AssessmentListPage> createState() => _AssessmentListPageState();
@@ -501,7 +501,9 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              navigator.pop();
               if (searchQuery.isNotEmpty) {
                 try {
                   final results = await _assessmentItemDao.searchItems(searchQuery);
@@ -510,7 +512,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                   });
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       SnackBar(content: Text('搜索失败: $e')),
                     );
                   }

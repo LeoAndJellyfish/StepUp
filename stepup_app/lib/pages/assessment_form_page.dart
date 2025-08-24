@@ -17,7 +17,7 @@ import '../widgets/common_widgets.dart';
 class AssessmentFormPage extends StatefulWidget {
   final int? itemId;
 
-  const AssessmentFormPage({Key? key, this.itemId}) : super(key: key);
+  const AssessmentFormPage({super.key, this.itemId});
 
   @override
   State<AssessmentFormPage> createState() => _AssessmentFormPageState();
