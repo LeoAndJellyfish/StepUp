@@ -75,7 +75,6 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         code TEXT,
-        score_multiplier REAL DEFAULT 1.0,
         description TEXT,
         created_at INTEGER NOT NULL
       )
@@ -92,7 +91,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建综测条目表
+    // 创建assessment_items表
     await db.execute('''
       CREATE TABLE assessment_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,7 +100,6 @@ class DatabaseHelper {
         category_id INTEGER NOT NULL,
         subcategory_id INTEGER,
         level_id INTEGER,
-        score REAL NOT NULL DEFAULT 0.0,
         duration REAL NOT NULL DEFAULT 0.0,
         activity_date INTEGER NOT NULL,
         is_awarded INTEGER DEFAULT 0,
@@ -131,22 +129,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建评分规则表
-    await db.execute('''
-      CREATE TABLE scoring_rules (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        category_id INTEGER NOT NULL,
-        rule_type TEXT NOT NULL DEFAULT 'fixed',
-        parameters TEXT,
-        is_enabled INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
-      )
-    ''');
-
     // 创建文件附件表
     await db.execute('''
       CREATE TABLE file_attachments (
@@ -170,8 +152,6 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_assessment_items_level_id ON assessment_items(level_id)');
     await db.execute('CREATE INDEX idx_assessment_items_activity_date ON assessment_items(activity_date)');
     await db.execute('CREATE INDEX idx_subcategories_category_id ON subcategories(category_id)');
-    await db.execute('CREATE INDEX idx_scoring_rules_category_id ON scoring_rules(category_id)');
-    await db.execute('CREATE INDEX idx_scoring_rules_is_enabled ON scoring_rules(is_enabled)');
 
     // 插入默认分类数据
     await _insertDefaultCategories(db);
@@ -209,7 +189,6 @@ class DatabaseHelper {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           code TEXT,
-          score_multiplier REAL DEFAULT 1.0,
           description TEXT,
           created_at INTEGER NOT NULL
         )
@@ -247,28 +226,10 @@ class DatabaseHelper {
         )
       ''');
 
-      // 创建评分规则表
-      await db.execute('''
-        CREATE TABLE scoring_rules (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          description TEXT,
-          category_id INTEGER NOT NULL,
-          rule_type TEXT NOT NULL DEFAULT 'fixed',
-          parameters TEXT,
-          is_enabled INTEGER NOT NULL DEFAULT 1,
-          created_at INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL,
-          FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
-        )
-      ''');
-
       // 创建新的索引
       await db.execute('CREATE INDEX idx_assessment_items_subcategory_id ON assessment_items(subcategory_id)');
       await db.execute('CREATE INDEX idx_assessment_items_level_id ON assessment_items(level_id)');
       await db.execute('CREATE INDEX idx_subcategories_category_id ON subcategories(category_id)');
-      await db.execute('CREATE INDEX idx_scoring_rules_category_id ON scoring_rules(category_id)');
-      await db.execute('CREATE INDEX idx_scoring_rules_is_enabled ON scoring_rules(is_enabled)');
       
       // 更新categories表的code字段
       await db.execute('UPDATE categories SET code = "01" WHERE name = "德育"');
@@ -441,12 +402,12 @@ class DatabaseHelper {
     final now = DateTime.now().millisecondsSinceEpoch;
     
     final defaultLevels = [
-      {'name': '国家级', 'code': 'NATIONAL', 'score_multiplier': 5.0, 'description': '全国大学生数学建模竞赛一等奖', 'created_at': now},
-      {'name': '省部级', 'code': 'PROVINCIAL', 'score_multiplier': 3.0, 'description': '省级学术比赛、部委主办的活动', 'created_at': now},
-      {'name': '市级/地区级', 'code': 'CITY', 'score_multiplier': 2.0, 'description': '北京市级活动、跨校区域性比赛', 'created_at': now},
-      {'name': '校级', 'code': 'UNIVERSITY', 'score_multiplier': 1.5, 'description': '中央财经大学主办的活动、校级竞赛', 'created_at': now},
-      {'name': '院级', 'code': 'COLLEGE', 'score_multiplier': 1.0, 'description': '统计与数学学院主办活动', 'created_at': now},
-      {'name': '其他', 'code': 'OTHER', 'score_multiplier': 0.5, 'description': '未明确级别，需人工核定', 'created_at': now},
+      {'name': '国家级', 'code': 'NATIONAL', 'description': '全国大学生数学建模竞赛一等奖', 'created_at': now},
+      {'name': '省部级', 'code': 'PROVINCIAL', 'description': '省级学术比赛、部委主办的活动', 'created_at': now},
+      {'name': '市级/地区级', 'code': 'CITY', 'description': '北京市级活动、跨校区域性比赛', 'created_at': now},
+      {'name': '校级', 'code': 'UNIVERSITY', 'description': '中央财经大学主办的活动、校级竞赛', 'created_at': now},
+      {'name': '院级', 'code': 'COLLEGE', 'description': '统计与数学学院主办活动', 'created_at': now},
+      {'name': '其他', 'code': 'OTHER', 'description': '未明确级别，需人工核定', 'created_at': now},
     ];
 
     for (final level in defaultLevels) {

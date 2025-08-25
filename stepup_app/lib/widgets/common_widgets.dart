@@ -234,64 +234,6 @@ class StatsCard extends StatelessWidget {
   }
 }
 
-// 分数显示组件
-class ScoreDisplay extends StatelessWidget {
-  final double score;
-  final double? maxScore;
-  final bool showProgress;
-
-  const ScoreDisplay({
-    super.key,
-    required this.score,
-    this.maxScore,
-    this.showProgress = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              score.toStringAsFixed(1),
-              style: AppTheme.titleLarge.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (maxScore != null) ...[
-              Text(
-                ' / ${maxScore!.toStringAsFixed(1)}',
-                style: AppTheme.bodyMedium.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
-              ),
-            ],
-            const SizedBox(width: AppTheme.spacing4),
-            Text(
-              '分',
-              style: AppTheme.bodyMedium.copyWith(
-                color: theme.colorScheme.outline,
-              ),
-            ),
-          ],
-        ),
-        if (showProgress && maxScore != null) ...[
-          const SizedBox(height: AppTheme.spacing8),
-          LinearProgressIndicator(
-            value: score / maxScore!,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 // 自定义分割线
 class CustomDivider extends StatelessWidget {
   final double? height;

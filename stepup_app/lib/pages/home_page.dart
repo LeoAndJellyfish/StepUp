@@ -183,16 +183,6 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: AppTheme.spacing8),
               Expanded(
                 child: StatsCard(
-                  title: '总积分',
-                  value: '${(stats['totalScore'] ?? 0.0).toStringAsFixed(1)}',
-                  icon: Icons.star,
-                  color: Colors.orange,
-                  onTap: () => context.go('/statistics'),
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacing8),
-              Expanded(
-                child: StatsCard(
                   title: '总时长',
                   value: '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h',
                   icon: Icons.access_time,
@@ -278,12 +268,6 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '${(category['total_score'] ?? 0.0).toStringAsFixed(1)} 分',
-                      style: AppTheme.titleSmall.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
                     Text(
                       '${(category['total_duration'] ?? 0.0).toStringAsFixed(1)} 时',
                       style: AppTheme.bodySmall.copyWith(

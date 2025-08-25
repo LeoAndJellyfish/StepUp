@@ -68,14 +68,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
       for (final level in levels) {
         final items = await _assessmentItemDao.getAllItems(levelId: level.id);
         if (items.isNotEmpty) {
-          final totalScore = items.fold<double>(0, (sum, item) => sum + item.score);
           final totalDuration = items.fold<double>(0, (sum, item) => sum + item.duration);
           levelStats.add({
             'level': level,
             'count': items.length,
-            'totalScore': totalScore,
             'totalDuration': totalDuration,
-            'avgScore': totalScore / items.length,
+            'avgDuration': totalDuration / items.length,
           });
         }
       }
@@ -187,10 +185,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 const SizedBox(width: AppTheme.spacing12),
                 Expanded(
                   child: _buildStatCard(
-                    '总分数',
-                    '${(stats['totalScore'] ?? 0.0).toStringAsFixed(1)}',
-                    '分',
-                    Icons.star,
+                    '总时长',
+                    '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}',
+                    '小时',
+                    Icons.access_time,
                     theme.colorScheme.secondary,
                   ),
                 ),
@@ -339,8 +337,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Expanded(
                 child: Text('条目数: ${stats['totalCount']}')),
               Expanded(
-                child: Text('得分: ${(stats['totalScore'] ?? 0.0).toStringAsFixed(1)}')),
-              Expanded(
                 child: Text('时长: ${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h')),
             ],
           ),
@@ -396,7 +392,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   style: AppTheme.titleSmall,
                 ),
                 Text(
-                  '系数: ${level.scoreMultiplier}',
+                  '级别代码: ${level.code}',
                   style: AppTheme.bodySmall.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -407,9 +403,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
           Expanded(
             child: Text('数量: ${stats['count']}')),
           Expanded(
-            child: Text('得分: ${(stats['totalScore']).toStringAsFixed(1)}')),
+            child: Text('时长: ${(stats['totalDuration']).toStringAsFixed(1)}h')),
           Expanded(
-            child: Text('平均: ${(stats['avgScore']).toStringAsFixed(1)}')),
+            child: Text('平均: ${(stats['avgDuration']).toStringAsFixed(1)}h')),
         ],
       ),
     );

@@ -65,7 +65,6 @@ void main() {
         title: '测试活动',
         description: '这是一个测试活动',
         categoryId: category.id!,
-        score: 10.5,
         duration: 2.0,
         activityDate: DateTime.now(),
         createdAt: DateTime.now(),
@@ -79,7 +78,6 @@ void main() {
       final savedItem = await assessmentItemDao.getItemById(itemId);
       expect(savedItem, isNotNull);
       expect(savedItem!.title, equals('测试活动'));
-      expect(savedItem.score, equals(10.5));
       expect(savedItem.duration, equals(2.0));
     });
 
@@ -89,14 +87,11 @@ void main() {
       
       expect(stats, isNotNull);
       expect(stats['totalCount'], isA<int>());
-      expect(stats['totalScore'], isA<double>());
       expect(stats['totalDuration'], isA<double>());
-      expect(stats['statusCounts'], isA<Map>());
       expect(stats['categoryStats'], isA<List>());
       
       // 验证统计数据的合理性
       expect(stats['totalCount'], greaterThanOrEqualTo(0));
-      expect(stats['totalScore'], greaterThanOrEqualTo(0.0));
       expect(stats['totalDuration'], greaterThanOrEqualTo(0.0));
     });
 
@@ -109,7 +104,6 @@ void main() {
         title: '可搜索的特殊活动',
         description: '这个活动包含特殊关键词',
         categoryId: category.id!,
-        score: 5.0,
         duration: 1.0,
         activityDate: DateTime.now(),
         createdAt: DateTime.now(),

@@ -172,11 +172,10 @@ class AssessmentItemDao {
 
     final String whereClause = whereClauses.isEmpty ? '' : 'WHERE ${whereClauses.join(' AND ')}';
 
-    // 获取总数、总分、总时长
+    // 获取总数、总时长
     final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT 
         COUNT(*) as total_count,
-        SUM(score) as total_score,
         SUM(duration) as total_duration
       FROM assessment_items 
       $whereClause
@@ -207,18 +206,16 @@ class AssessmentItemDao {
         c.name as category_name,
         c.color as category_color,
         COUNT(*) as count,
-        SUM(ai.score) as total_score,
         SUM(ai.duration) as total_duration
       FROM assessment_items ai
       LEFT JOIN categories c ON ai.category_id = c.id
       $categoryWhereClause
       GROUP BY ai.category_id, c.name, c.color
-      ORDER BY total_score DESC
+      ORDER BY total_duration DESC
     ''', categoryWhereArgs);
 
     return {
       'totalCount': result.first['total_count'] ?? 0,
-      'totalScore': result.first['total_score'] ?? 0.0,
       'totalDuration': result.first['total_duration'] ?? 0.0,
       'categoryStats': categoryResult,
     };
@@ -249,7 +246,6 @@ class AssessmentItemDao {
       SELECT 
         strftime('%m', datetime(activity_date/1000, 'unixepoch')) as month,
         COUNT(*) as count,
-        SUM(score) as total_score,
         SUM(duration) as total_duration
       FROM assessment_items 
       WHERE activity_date >= ? AND activity_date < ?

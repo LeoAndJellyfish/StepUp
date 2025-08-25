@@ -280,20 +280,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
               Row(
                 children: [
                   Icon(
-                    Icons.star,
-                    size: 16,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: AppTheme.spacing4),
-                  Text(
-                    '${item.score.toStringAsFixed(1)} 分',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: AppTheme.spacing16),
-                  Icon(
                     Icons.access_time,
                     size: 16,
                     color: theme.colorScheme.outline,

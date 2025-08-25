@@ -6,7 +6,6 @@ class AssessmentItem {
   final int categoryId;
   final int? subcategoryId;
   final int? levelId;
-  final double score;
   final double duration; // 时长（小时）
   final DateTime activityDate;
   final bool isAwarded; // 是否获奖
@@ -27,7 +26,6 @@ class AssessmentItem {
     required this.categoryId,
     this.subcategoryId,
     this.levelId,
-    required this.score,
     required this.duration,
     required this.activityDate,
     this.isAwarded = false,
@@ -51,7 +49,6 @@ class AssessmentItem {
       categoryId: map['category_id']?.toInt() ?? 0,
       subcategoryId: map['subcategory_id']?.toInt(),
       levelId: map['level_id']?.toInt(),
-      score: map['score']?.toDouble() ?? 0.0,
       duration: map['duration']?.toDouble() ?? 0.0,
       activityDate: DateTime.fromMillisecondsSinceEpoch(map['activity_date']),
       isAwarded: (map['is_awarded'] ?? 0) == 1,
@@ -76,7 +73,6 @@ class AssessmentItem {
       'category_id': categoryId,
       'subcategory_id': subcategoryId,
       'level_id': levelId,
-      'score': score,
       'duration': duration,
       'activity_date': activityDate.millisecondsSinceEpoch,
       'is_awarded': isAwarded ? 1 : 0,
@@ -100,7 +96,6 @@ class AssessmentItem {
     int? categoryId,
     int? subcategoryId,
     int? levelId,
-    double? score,
     double? duration,
     DateTime? activityDate,
     bool? isAwarded,
@@ -121,7 +116,6 @@ class AssessmentItem {
       categoryId: categoryId ?? this.categoryId,
       subcategoryId: subcategoryId ?? this.subcategoryId,
       levelId: levelId ?? this.levelId,
-      score: score ?? this.score,
       duration: duration ?? this.duration,
       activityDate: activityDate ?? this.activityDate,
       isAwarded: isAwarded ?? this.isAwarded,
@@ -139,7 +133,7 @@ class AssessmentItem {
 
   @override
   String toString() {
-    return 'AssessmentItem(id: $id, title: $title, categoryId: $categoryId, score: $score)';
+    return 'AssessmentItem(id: $id, title: $title, categoryId: $categoryId, duration: $duration)';
   }
 
   @override
@@ -150,7 +144,6 @@ class AssessmentItem {
         other.title == title &&
         other.description == description &&
         other.categoryId == categoryId &&
-        other.score == score &&
         other.duration == duration &&
         other.activityDate == activityDate;
   }
@@ -161,7 +154,6 @@ class AssessmentItem {
         title.hashCode ^
         description.hashCode ^
         categoryId.hashCode ^
-        score.hashCode ^
         duration.hashCode ^
         activityDate.hashCode;
   }

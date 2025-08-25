@@ -98,12 +98,6 @@ class CategoryDao {
       [categoryId],
     );
     
-    // 获取总分数
-    final List<Map<String, dynamic>> scoreResult = await db.rawQuery(
-      'SELECT SUM(score) as total_score FROM assessment_items WHERE category_id = ?',
-      [categoryId],
-    );
-    
     // 获取总时长
     final List<Map<String, dynamic>> durationResult = await db.rawQuery(
       'SELECT SUM(duration) as total_duration FROM assessment_items WHERE category_id = ?',
@@ -112,7 +106,6 @@ class CategoryDao {
 
     return {
       'count': countResult.first['count'] ?? 0,
-      'totalScore': scoreResult.first['total_score'] ?? 0.0,
       'totalDuration': durationResult.first['total_duration'] ?? 0.0,
     };
   }

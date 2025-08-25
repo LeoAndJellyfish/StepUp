@@ -33,7 +33,6 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _scoreController = TextEditingController();
   final _durationController = TextEditingController();
   final _participantCountController = TextEditingController(text: '1');
   final _awardLevelController = TextEditingController();
@@ -94,7 +93,6 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           _currentItem = item;
           _titleController.text = item.title;
           _descriptionController.text = item.description;
-          _scoreController.text = item.score.toString();
           _durationController.text = item.duration.toString();
           _participantCountController.text = item.participantCount.toString();
           _awardLevelController.text = item.awardLevel ?? '';
@@ -282,39 +280,18 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                       items: _levels.map((level) {
                         return DropdownMenuItem<int>(
                           value: level.id,
-                          child: Text('${level.name} (系数: ${level.scoreMultiplier})'),
+                          child: Text('${level.name} (${level.code})'),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedLevelId = value;
                         });
-                        _calculateScore(); // 自动计算分数
+                        _calculateScore(); // 自动计算功能已删除
                       },
                       validator: (value) {
                         if (value == null) {
                           return '请选择活动级别';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppTheme.spacing16),
-                    
-                    // 得分
-                    TextFormField(
-                      controller: _scoreController,
-                      decoration: const InputDecoration(
-                        labelText: '得分',
-                        hintText: '请输入得分',
-                        suffixText: '分',
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '请输入得分';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return '请输入有效的数字';
                         }
                         return null;
                       },
@@ -707,10 +684,9 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     }
   }
 
-  // 自动计算分数
+  // 自动计算功能已删除，将来由AI处理
   void _calculateScore() {
-    // 这里可以根据级别系数自动计算分数
-    // 目前先保持手动输入
+    // 该功能已删除，将来由AI根据评分标准自动计分
   }
 
   Future<void> _selectDate() async {
@@ -882,7 +858,6 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           categoryId: _selectedCategoryId!,
           subcategoryId: _selectedSubcategoryId,
           levelId: _selectedLevelId,
-          score: double.parse(_scoreController.text),
           duration: double.parse(_durationController.text),
           activityDate: _selectedDate,
           isAwarded: _isAwarded,
@@ -966,7 +941,6 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     // 清理控制器
     _titleController.dispose();
     _descriptionController.dispose();
-    _scoreController.dispose();
     _durationController.dispose();
     _participantCountController.dispose();
     _awardLevelController.dispose();
