@@ -9,7 +9,7 @@ class LevelDao {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'levels',
-      orderBy: 'score_multiplier DESC',
+      orderBy: 'id ASC',
     );
 
     return List.generate(maps.length, (i) {
