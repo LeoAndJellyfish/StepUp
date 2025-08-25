@@ -13,22 +13,85 @@ class FileManager {
 
   final Uuid _uuid = const Uuid();
 
-  /// 获取应用文档目录
-  Future<Directory> get _documentsDirectory async {
-    return await getApplicationDocumentsDirectory();
+  /// 获取应用数据目录（应用所在目录的data文件夹）
+  Future<Directory> get _appDataDirectory async {
+    // 获取应用可执行文件的目录
+    final executablePath = Platform.resolvedExecutable;
+    final executableDir = Directory(path.dirname(executablePath));
+    
+    // 在应用目录下创建data文件夹
+    final dataDir = Directory(path.join(executableDir.path, 'data'));
+    if (!await dataDir.exists()) {
+      await dataDir.create(recursive: true);
+    }
+    return dataDir;
   }
 
-  /// 获取证明材料存储目录
+  /// 获取证明材料存储目录（在应用data文件夹下）
   Future<Directory> get _proofMaterialsDirectory async {
-    final docs = await _documentsDirectory;
-    final proofDir = Directory('${docs.path}/proof_materials');
+    final dataDir = await _appDataDirectory;
+    final proofDir = Directory(path.join(dataDir.path, 'proof_materials'));
     if (!await proofDir.exists()) {
       await proofDir.create(recursive: true);
     }
     return proofDir;
   }
 
-  /// 复制文件到应用目录并返回新路径
+  /// 获取应用数据目录路径（公共方法）
+  Future<String> getAppDataPath() async {
+    final dataDir = await _appDataDirectory;
+    return dataDir.path;
+  }
+
+  /// 迁移现有证明材料文件从用户文档目录到应用data目录
+  Future<void> migrateProofMaterials() async {
+    try {
+      // 获取旧的证明材料目录（用户文档目录下）
+      final oldDocumentsDir = await getApplicationDocumentsDirectory();
+      final oldProofDir = Directory('${oldDocumentsDir.path}/proof_materials');
+      
+      if (!await oldProofDir.exists()) {
+        debugPrint('旧的证明材料目录不存在，无需迁移');
+        return;
+      }
+      
+      // 获取新的证明材料目录（应用data目录下）
+      final newProofDir = await _proofMaterialsDirectory;
+      
+      // 获取旧目录中的所有文件
+      final files = await oldProofDir.list().toList();
+      int migratedCount = 0;
+      
+      for (final entity in files) {
+        if (entity is File) {
+          final fileName = path.basename(entity.path);
+          final newFilePath = path.join(newProofDir.path, fileName);
+          
+          // 检查新位置是否已存在同名文件
+          final newFile = File(newFilePath);
+          if (!await newFile.exists()) {
+            await entity.copy(newFilePath);
+            migratedCount++;
+            debugPrint('迁移文件: ${entity.path} -> $newFilePath');
+          } else {
+            debugPrint('文件已存在，跳过: $newFilePath');
+          }
+        }
+      }
+      
+      debugPrint('证明材料迁移完成，共迁移 $migratedCount 个文件');
+      
+      // 迁移完成后，可以选择删除旧目录（保留注释以便用户手动处理）
+      // if (migratedCount > 0) {
+      //   await oldProofDir.delete(recursive: true);
+      //   debugPrint('已删除旧的证明材料目录: ${oldProofDir.path}');
+      // }
+      
+    } catch (e) {
+      debugPrint('迁移证明材料文件失败: $e');
+      // 不抛出异常，以免影响应用启动
+    }
+  }
   /// [sourceFilePath] 源文件路径
   /// [fileName] 可选的文件名，如果不提供则使用UUID生成
   Future<String> copyFileToAppDirectory(String sourceFilePath, {String? fileName}) async {

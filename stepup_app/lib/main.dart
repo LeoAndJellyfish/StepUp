@@ -6,6 +6,7 @@ import 'dart:io';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 import 'services/database_helper.dart';
+import 'services/file_manager.dart';
 
 void main() async {
   // 确保Flutter绑定初始化
@@ -29,6 +30,10 @@ void main() async {
   // 初始化数据库
   final databaseHelper = DatabaseHelper();
   await databaseHelper.database; // 这会触发数据库创建或升级
+  
+  // 迁移现有的证明材料文件到应用data目录
+  final fileManager = FileManager();
+  await fileManager.migrateProofMaterials();
   
   runApp(const MyApp());
 }
