@@ -66,6 +66,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   
   // 证明材料相关 - 支持多文件
   List<FileAttachment> _attachments = [];
+  // 跟踪新上传但未保存的文件，用于在取消时清理
+  final Set<String> _unsavedFilePaths = {};
   final ImagePicker _imagePicker = ImagePicker();
   
   bool _isLoading = true;
@@ -114,6 +116,7 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
             // 加载文件附件
             final attachments = await _fileAttachmentDao.getAttachmentsByItemId(item.id!);
             _attachments = attachments;
+            // 注意：编辑模式下的现有文件不加入未保存列表
           }
           
           // 如果有选中的分类，加载对应的子分类
@@ -144,10 +147,22 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? '编辑条目' : '添加条目'),
-        actions: [
+    return PopScope(
+      canPop: _unsavedFilePaths.isEmpty,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        // 如果有未保存的文件并且实际没有返回，显示确认对话框
+        if (!didPop && _unsavedFilePaths.isNotEmpty) {
+          _showDiscardConfirmDialog();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(isEditing ? '编辑条目' : '添加条目'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleBackPress,
+          ),
+          actions: [
           if (isEditing) ...[
             IconButton(
               onPressed: _isSaving ? null : () => _showDeleteConfirmDialog(),
@@ -445,6 +460,7 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                 ),
               ),
             ),
+      ),
     );
   }
 
@@ -735,6 +751,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         
         setState(() {
           _attachments.add(attachment);
+          // 记录新上传的文件，用于可能的清理
+          _unsavedFilePaths.add(attachment.filePath);
         });
         
         if (mounted) {
@@ -777,6 +795,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
             
             setState(() {
               _attachments.add(attachment);
+              // 记录新上传的文件，用于可能的清理
+              _unsavedFilePaths.add(attachment.filePath);
             });
           }
         }
@@ -800,6 +820,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   void _removeAttachment(FileAttachment attachment) {
     setState(() {
       _attachments.remove(attachment);
+      // 从未保存列表中移除
+      _unsavedFilePaths.remove(attachment.filePath);
     });
     
     // 如果文件已经上传到应用目录，则删除文件
@@ -910,6 +932,9 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         }
         
         if (mounted) {
+          // 清空未保存文件列表，因为已经成功保存
+          _unsavedFilePaths.clear();
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(isEditing ? '更新成功' : '添加成功')),
           );
@@ -935,6 +960,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
 
   @override
   void dispose() {
+    // 清理未保存的文件
+    _cleanupUnsavedFiles();
+    
+    // 清理控制器
     _titleController.dispose();
     _descriptionController.dispose();
     _scoreController.dispose();
@@ -943,6 +972,57 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     _awardLevelController.dispose();
     _remarksController.dispose();
     super.dispose();
+  }
+
+  /// 处理返回按钮点击
+  void _handleBackPress() {
+    // 如果有未保存的文件，显示确认对话框
+    if (_unsavedFilePaths.isNotEmpty) {
+      _showDiscardConfirmDialog();
+    } else {
+      // 没有未保存文件，直接返回
+      context.pop();
+    }
+  }
+
+  /// 显示放弃更改确认对话框
+  void _showDiscardConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('放弃更改'),
+        content: Text(
+          '您已上传了 ${_unsavedFilePaths.length} 个文件但尚未保存。\n'
+          '放弃更改将会删除这些文件，确定要继续吗？'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('继续编辑'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // 清理文件并返回
+              _cleanupUnsavedFiles();
+              context.pop();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('放弃更改'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 清理未保存的文件
+  void _cleanupUnsavedFiles() {
+    for (final filePath in _unsavedFilePaths) {
+      _fileManager.deleteFile(filePath);
+    }
+    _unsavedFilePaths.clear();
   }
 
   // 显示删除确认对话框
