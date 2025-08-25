@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -81,11 +82,82 @@ class FileManager {
     try {
       final file = File(filePath);
       if (await file.exists()) {
+        // 检查并处理只读属性（主要针对Windows平台）
+        if (Platform.isWindows) {
+          await _removeReadOnlyAttribute(file);
+        }
         await file.delete();
+        debugPrint('文件删除成功: $filePath');
+      } else {
+        debugPrint('文件不存在，无需删除: $filePath');
       }
     } catch (e) {
-      // 静默处理删除错误，避免影响主流程
-      // 删除文件失败: $filePath, 错误: $e
+      debugPrint('删除文件失败: $filePath, 错误: $e');
+      // 尝试强制删除（移除只读属性后重试）
+      try {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await _forceDeleteFile(file);
+          debugPrint('强制删除文件成功: $filePath');
+        }
+      } catch (retryError) {
+        debugPrint('强制删除文件也失败: $filePath, 错误: $retryError');
+        // 记录错误但不抛出异常，避免影响主流程
+      }
+    }
+  }
+
+  /// 移除文件的只读属性（Windows平台）
+  Future<void> _removeReadOnlyAttribute(File file) async {
+    if (!Platform.isWindows) return;
+    
+    try {
+      // 在Windows上，我们使用Process来执行attrib命令移除只读属性
+      final result = await Process.run(
+        'attrib',
+        ['-R', file.path],
+        runInShell: true,
+      );
+      
+      if (result.exitCode != 0) {
+        debugPrint('移除只读属性失败: ${result.stderr}');
+      } else {
+        debugPrint('成功移除只读属性: ${file.path}');
+      }
+    } catch (e) {
+      debugPrint('移除只读属性时出错: $e');
+    }
+  }
+
+  /// 强制删除文件（处理权限问题）
+  Future<void> _forceDeleteFile(File file) async {
+    try {
+      // 先尝试移除只读属性
+      if (Platform.isWindows) {
+        await _removeReadOnlyAttribute(file);
+        
+        // 等待一小段时间让系统更新文件属性
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
+      // 再次尝试删除
+      await file.delete();
+    } catch (e) {
+      // 如果还是失败，尝试使用系统命令删除
+      if (Platform.isWindows) {
+        final result = await Process.run(
+          'del',
+          ['/F', '/Q', file.path],
+          runInShell: true,
+        );
+        
+        if (result.exitCode != 0) {
+          throw Exception('系统命令删除失败: ${result.stderr}');
+        }
+      } else {
+        // 非Windows平台，重新抛出原始异常
+        rethrow;
+      }
     }
   }
 
@@ -99,7 +171,7 @@ class FileManager {
         return bytes / (1024 * 1024); // 转换为MB
       }
     } catch (e) {
-      // 获取文件大小失败: $filePath, 错误: $e
+      debugPrint('获取文件大小失败: $filePath, 错误: $e');
     }
     return 0.0;
   }
@@ -154,12 +226,12 @@ class FileManager {
           final filePath = entity.path;
           if (!usedFilePaths.contains(filePath)) {
             await deleteFile(filePath);
-            // 清理未使用的文件: $filePath
+            debugPrint('清理未使用的文件: $filePath');
           }
         }
       }
     } catch (e) {
-      // 清理未使用文件失败: $e
+      debugPrint('清理未使用文件失败: $e');
     }
   }
 

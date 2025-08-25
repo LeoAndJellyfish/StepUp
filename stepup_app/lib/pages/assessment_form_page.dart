@@ -804,6 +804,13 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     
     // 如果文件已经上传到应用目录，则删除文件
     _fileManager.deleteFile(attachment.filePath);
+    
+    // 显示删除成功通知
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已移除文件: ${attachment.fileName}')),
+      );
+    }
   }
 
   // 预览文件附件
