@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -269,6 +269,13 @@ class DatabaseHelper {
       // 插入默认标签数据
       await _insertDefaultTags(db);
     }
+    
+    if (oldVersion < 3) {
+      // 从版本2升级到版本3：清理重复的标签
+      // 删除与表单字段重复的"获奖"和"代表集体"标签
+      await db.delete('assessment_item_tags', where: 'tag_id IN (SELECT id FROM tags WHERE code IN ("AWARDED", "COLLECTIVE"))');
+      await db.delete('tags', where: 'code IN ("AWARDED", "COLLECTIVE")');
+    }
   }
 
   Future<void> _insertDefaultCategories(Database db) async {
@@ -413,8 +420,7 @@ class DatabaseHelper {
     final now = DateTime.now().millisecondsSinceEpoch;
     
     final defaultTags = [
-      {'name': '代表集体', 'code': 'COLLECTIVE', 'description': '活动是否是以集体身份参与', 'created_at': now},
-      {'name': '获奖', 'code': 'AWARDED', 'description': '活动是否获得奖项', 'created_at': now},
+      // 移除了重复的"代表集体"和"获奖"标签，这些信息已在表单字段中体现
       {'name': '自评', 'code': 'SELF_EVAL', 'description': '该活动需学生自评后由评议小组核定', 'created_at': now},
       {'name': '需证明', 'code': 'NEED_PROOF', 'description': '活动加分需要上传证明材料', 'created_at': now},
       {'name': '时长积分', 'code': 'TIME_BASED', 'description': '以参与时长计分', 'created_at': now},
