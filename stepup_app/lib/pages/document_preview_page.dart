@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/file_manager.dart';
 
@@ -241,12 +242,7 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
                     ),
                     const SizedBox(height: AppTheme.spacing16),
                     FilledButton.icon(
-                      onPressed: () {
-                        // 这里可以添加外部应用打开功能
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('此功能暂未实现')),
-                        );
-                      },
+                      onPressed: _openWithExternalApp,
                       icon: const Icon(Icons.open_in_new),
                       label: const Text('使用外部应用打开'),
                     ),
@@ -258,6 +254,49 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
         ],
       ),
     );
+  }
+
+  /// 使用外部应用打开文件
+  Future<void> _openWithExternalApp() async {
+    try {
+      final file = File(widget.documentPath);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件不存在，无法打开')),
+          );
+        }
+        return;
+      }
+
+      // 使用 file:// URL 方案打开文件
+      final uri = Uri.file(widget.documentPath);
+      
+      if (await canLaunchUrl(uri)) {
+        final success = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        
+        if (!success) {
+          throw Exception('无法启动外部应用');
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已使用外部应用打开: ${_fileManager.getFileName(widget.documentPath)}')),
+          );
+        }
+      } else {
+        throw Exception('系统不支持打开此类型的文件');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开失败: $e')),
+        );
+      }
+    }
   }
 
   IconData _getFileIcon(String extension) {

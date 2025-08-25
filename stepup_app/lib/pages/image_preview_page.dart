@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 
 /// 图片预览页面
@@ -39,6 +40,11 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          IconButton(
+            onPressed: _openWithExternalApp,
+            icon: const Icon(Icons.open_in_new, color: Colors.white),
+            tooltip: '使用外部应用打开',
+          ),
           IconButton(
             onPressed: _resetZoom,
             icon: const Icon(Icons.zoom_out_map, color: Colors.white),
@@ -138,6 +144,59 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
         );
       },
     );
+  }
+
+  /// 使用外部应用打开图片
+  Future<void> _openWithExternalApp() async {
+    try {
+      final file = File(widget.imagePath);
+      if (!file.existsSync()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('图片文件不存在，无法打开'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 使用 file:// URL 方案打开文件
+      final uri = Uri.file(widget.imagePath);
+      
+      if (await canLaunchUrl(uri)) {
+        final success = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        
+        if (!success) {
+          throw Exception('无法启动外部应用');
+        }
+        
+        if (mounted) {
+          final fileName = widget.imagePath.split('/').last.split('\\').last;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已使用外部应用打开: $fileName'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('系统不支持打开此类型的文件');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('打开失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _resetZoom() {
