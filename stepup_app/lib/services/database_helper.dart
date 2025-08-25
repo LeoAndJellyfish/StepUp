@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -147,7 +147,24 @@ class DatabaseHelper {
       )
     ''');
 
+    // 创建文件附件表
+    await db.execute('''
+      CREATE TABLE file_attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        assessment_item_id INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type TEXT,
+        uploaded_at INTEGER NOT NULL,
+        FOREIGN KEY (assessment_item_id) REFERENCES assessment_items (id) ON DELETE CASCADE
+      )
+    ''');
+
     // 创建索引
+    await db.execute('CREATE INDEX idx_file_attachments_assessment_item_id ON file_attachments(assessment_item_id)');
+    await db.execute('CREATE INDEX idx_file_attachments_file_type ON file_attachments(file_type)');
     await db.execute('CREATE INDEX idx_assessment_items_category_id ON assessment_items(category_id)');
     await db.execute('CREATE INDEX idx_assessment_items_subcategory_id ON assessment_items(subcategory_id)');
     await db.execute('CREATE INDEX idx_assessment_items_level_id ON assessment_items(level_id)');
@@ -275,6 +292,27 @@ class DatabaseHelper {
       // 删除与表单字段重复的"获奖"和"代表集体"标签
       await db.delete('assessment_item_tags', where: 'tag_id IN (SELECT id FROM tags WHERE code IN ("AWARDED", "COLLECTIVE"))');
       await db.delete('tags', where: 'code IN ("AWARDED", "COLLECTIVE")');
+    }
+    
+    if (oldVersion < 4) {
+      // 从版本3升级到版本4：添加文件附件表
+      await db.execute('''
+        CREATE TABLE file_attachments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          assessment_item_id INTEGER NOT NULL,
+          file_name TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          file_type TEXT NOT NULL,
+          file_size INTEGER NOT NULL,
+          mime_type TEXT,
+          uploaded_at INTEGER NOT NULL,
+          FOREIGN KEY (assessment_item_id) REFERENCES assessment_items (id) ON DELETE CASCADE
+        )
+      ''');
+      
+      // 创建索引
+      await db.execute('CREATE INDEX idx_file_attachments_assessment_item_id ON file_attachments(assessment_item_id)');
+      await db.execute('CREATE INDEX idx_file_attachments_file_type ON file_attachments(file_type)');
     }
   }
 

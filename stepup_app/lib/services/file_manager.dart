@@ -44,6 +44,36 @@ class FileManager {
     await sourceFile.copy(targetPath);
     return targetPath;
   }
+  
+  /// 复制文件并获取文件信息
+  /// [sourceFilePath] 源文件路径
+  /// 返回 Map 包含: filePath, fileName, fileSize, mimeType, fileType
+  Future<Map<String, dynamic>> copyFileWithInfo(String sourceFilePath) async {
+    final sourceFile = File(sourceFilePath);
+    if (!await sourceFile.exists()) {
+      throw Exception('源文件不存在: $sourceFilePath');
+    }
+
+    final proofDir = await _proofMaterialsDirectory;
+    final extension = path.extension(sourceFilePath);
+    final originalFileName = path.basename(sourceFilePath);
+    final targetFileName = '${_uuid.v4()}$extension';
+    final targetPath = path.join(proofDir.path, targetFileName);
+
+    await sourceFile.copy(targetPath);
+    
+    final fileSize = await sourceFile.length();
+    final mimeType = getMimeType(sourceFilePath);
+    final fileType = isImageFile(sourceFilePath) ? 'image' : 'document';
+
+    return {
+      'filePath': targetPath,
+      'fileName': originalFileName,
+      'fileSize': fileSize,
+      'mimeType': mimeType,
+      'fileType': fileType,
+    };
+  }
 
   /// 删除文件
   /// [filePath] 要删除的文件路径
@@ -137,6 +167,37 @@ class FileManager {
   /// [filePath] 文件路径
   bool isSupportedFileType(String filePath) {
     return isImageFile(filePath) || isDocumentFile(filePath);
+  }
+
+  /// 获取文件MIME类型
+  /// [filePath] 文件路径
+  String? getMimeType(String filePath) {
+    final extension = getFileExtension(filePath);
+    switch (extension) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.gif':
+        return 'image/gif';
+      case '.bmp':
+        return 'image/bmp';
+      case '.webp':
+        return 'image/webp';
+      case '.pdf':
+        return 'application/pdf';
+      case '.doc':
+        return 'application/msword';
+      case '.docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case '.txt':
+        return 'text/plain';
+      case '.rtf':
+        return 'application/rtf';
+      default:
+        return null;
+    }
   }
 
   /// 获取文件类型描述

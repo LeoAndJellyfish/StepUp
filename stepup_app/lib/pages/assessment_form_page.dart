@@ -8,11 +8,15 @@ import '../models/category.dart';
 import '../models/subcategory.dart';
 import '../models/level.dart';
 import '../models/tag.dart';
+import '../models/file_attachment.dart';
 import '../services/assessment_item_dao.dart';
 import '../services/category_dao.dart';
 import '../services/subcategory_dao.dart';
 import '../services/level_dao.dart';
 import '../services/tag_dao.dart';
+import '../services/file_attachment_dao.dart';
+import '../services/file_manager.dart';
+import '../services/assessment_deletion_service.dart';
 import '../services/event_bus.dart';
 import '../widgets/common_widgets.dart';
 
@@ -40,6 +44,9 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
   final LevelDao _levelDao = LevelDao();
   final TagDao _tagDao = TagDao();
+  final FileAttachmentDao _fileAttachmentDao = FileAttachmentDao();
+  final FileManager _fileManager = FileManager();
+  final AssessmentItemDeletionService _deletionService = AssessmentItemDeletionService();
   final EventBus _eventBus = EventBus();
   
   List<Category> _categories = [];
@@ -57,9 +64,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   bool _isCollective = false;
   bool _isLeader = false;
   
-  // 证明材料相关
-  String? _selectedImagePath;
-  String? _selectedFilePath;
+  // 证明材料相关 - 支持多文件
+  List<FileAttachment> _attachments = [];
   final ImagePicker _imagePicker = ImagePicker();
   
   bool _isLoading = true;
@@ -99,13 +105,15 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           _isAwarded = item.isAwarded;
           _isCollective = item.isCollective;
           _isLeader = item.isLeader;
-          _selectedImagePath = item.imagePath;
-          _selectedFilePath = item.filePath;
           
           // 加载条目的标签
           if (item.id != null) {
             final itemTags = await _tagDao.getTagsByAssessmentItemId(item.id!);
             _selectedTagIds = itemTags.map((tag) => tag.id!).toList();
+            
+            // 加载文件附件
+            final attachments = await _fileAttachmentDao.getAttachmentsByItemId(item.id!);
+            _attachments = attachments;
           }
           
           // 如果有选中的分类，加载对应的子分类
@@ -488,146 +496,182 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '证明材料',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+        Row(
+          children: [
+            const Text(
+              '证明材料',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '已上传 ${_attachments.length} 个文件',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppTheme.spacing8),
         
-        // 证明图片
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacing12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.image, size: 20),
-                    const SizedBox(width: AppTheme.spacing8),
-                    const Text('证明图片', style: TextStyle(fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.add_photo_alternate, size: 18),
-                      label: const Text('选择图片'),
-                    ),
-                  ],
-                ),
-                if (_selectedImagePath != null) ...[
-                  const SizedBox(height: AppTheme.spacing8),
-                  Container(
-                    padding: const EdgeInsets.all(AppTheme.spacing8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.image, size: 16, color: Colors.green),
-                        const SizedBox(width: AppTheme.spacing8),
-                        Expanded(
-                          child: Text(
-                            _getFileName(_selectedImagePath!),
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => _previewImage(_selectedImagePath!),
-                          icon: const Icon(Icons.visibility, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          tooltip: '预览图片',
-                        ),
-                        IconButton(
-                          onPressed: _removeImage,
-                          icon: const Icon(Icons.close, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        ),
-                      ],
+        // 上传按钮区域
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.add_photo_alternate, size: 18),
+                label: const Text('添加图片'),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _pickFile,
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('添加文件'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing8),
+        
+        // 文件列表
+        if (_attachments.isNotEmpty) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacing12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '已上传的文件',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
+                  const SizedBox(height: AppTheme.spacing8),
+                  ..._attachments.map((attachment) => _buildAttachmentItem(attachment)),
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: AppTheme.spacing8),
-        
-        // 证明文件
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacing12),
+        ] else ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppTheme.spacing16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                style: BorderStyle.solid,
+              ),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.attach_file, size: 20),
-                    const SizedBox(width: AppTheme.spacing8),
-                    const Text('证明文件', style: TextStyle(fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: _pickFile,
-                      icon: const Icon(Icons.upload_file, size: 18),
-                      label: const Text('选择文件'),
-                    ),
-                  ],
+                Icon(
+                  Icons.cloud_upload_outlined,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.outline,
                 ),
-                if (_selectedFilePath != null) ...[
-                  const SizedBox(height: AppTheme.spacing8),
-                  Container(
-                    padding: const EdgeInsets.all(AppTheme.spacing8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(_getFileIcon(_selectedFilePath!), size: 16, color: Colors.blue),
-                        const SizedBox(width: AppTheme.spacing8),
-                        Expanded(
-                          child: Text(
-                            _getFileName(_selectedFilePath!),
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => _previewFile(_selectedFilePath!),
-                          icon: const Icon(Icons.visibility, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          tooltip: '预览文件',
-                        ),
-                        IconButton(
-                          onPressed: _removeFile,
-                          icon: const Icon(Icons.close, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: AppTheme.spacing8),
+                Text(
+                  '暂无证明材料',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
                   ),
-                ],
+                ),
                 const SizedBox(height: AppTheme.spacing4),
                 Text(
-                  '支持格式：PDF、Word、文本、图片',
+                  '支持格式：图片(JPG、PNG、GIF)、文档(PDF、Word、文本)',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ],
+    );
+  }
+  
+  // 构建文件附件项
+  Widget _buildAttachmentItem(FileAttachment attachment) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppTheme.spacing8),
+      padding: const EdgeInsets.all(AppTheme.spacing8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _getFileIcon(attachment),
+            size: 20,
+            color: attachment.isImage ? Colors.green : Colors.blue,
+          ),
+          const SizedBox(width: AppTheme.spacing8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  attachment.fileName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      attachment.isImage ? '图片' : '文档',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    Text(
+                      ' • ${attachment.formattedFileSize}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _previewAttachment(attachment),
+            icon: const Icon(Icons.visibility, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: '预览',
+          ),
+          IconButton(
+            onPressed: () => _removeAttachment(attachment),
+            icon: const Icon(Icons.close, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            tooltip: '移除',
+          ),
+        ],
+      ),
     );
   }
 
@@ -678,9 +722,26 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
       );
       
       if (image != null) {
+        final fileInfo = await _fileManager.copyFileWithInfo(image.path);
+        final attachment = FileAttachment(
+          assessmentItemId: 0, // 伴在保存时设置
+          fileName: fileInfo['fileName'],
+          filePath: fileInfo['filePath'],
+          fileType: fileInfo['fileType'],
+          fileSize: fileInfo['fileSize'],
+          mimeType: fileInfo['mimeType'],
+          uploadedAt: DateTime.now(),
+        );
+        
         setState(() {
-          _selectedImagePath = image.path;
+          _attachments.add(attachment);
         });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('图片上传成功: ${attachment.fileName}')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -696,14 +757,35 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'],
-        allowMultiple: false,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'],
+        allowMultiple: true, // 支持多文件选择
       );
       
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _selectedFilePath = result.files.single.path;
-        });
+      if (result != null) {
+        for (final file in result.files) {
+          if (file.path != null) {
+            final fileInfo = await _fileManager.copyFileWithInfo(file.path!);
+            final attachment = FileAttachment(
+              assessmentItemId: 0, // 伴在保存时设置
+              fileName: fileInfo['fileName'],
+              filePath: fileInfo['filePath'],
+              fileType: fileInfo['fileType'],
+              fileSize: fileInfo['fileSize'],
+              mimeType: fileInfo['mimeType'],
+              uploadedAt: DateTime.now(),
+            );
+            
+            setState(() {
+              _attachments.add(attachment);
+            });
+          }
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('文件上传成功: ${result.files.length} 个文件')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -714,29 +796,36 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     }
   }
 
-  // 移除证明图片
-  void _removeImage() {
+  // 移除文件附件
+  void _removeAttachment(FileAttachment attachment) {
     setState(() {
-      _selectedImagePath = null;
+      _attachments.remove(attachment);
     });
+    
+    // 如果文件已经上传到应用目录，则删除文件
+    _fileManager.deleteFile(attachment.filePath);
   }
 
-  // 移除证明文件
-  void _removeFile() {
-    setState(() {
-      _selectedFilePath = null;
-    });
-  }
-
-  // 获取文件名
-  String _getFileName(String filePath) {
-    return filePath.split('/').last.split('\\').last;
+  // 预览文件附件
+  void _previewAttachment(FileAttachment attachment) {
+    if (attachment.isImage) {
+      context.push(
+        '/image-preview?path=${Uri.encodeComponent(attachment.filePath)}&title=${Uri.encodeComponent(attachment.fileName)}',
+      );
+    } else {
+      context.push(
+        '/document-preview?path=${Uri.encodeComponent(attachment.filePath)}&title=${Uri.encodeComponent(attachment.fileName)}',
+      );
+    }
   }
 
   // 获取文件图标
-  IconData _getFileIcon(String filePath) {
-    final extension = filePath.split('.').last.toLowerCase();
-    switch (extension) {
+  IconData _getFileIcon(FileAttachment attachment) {
+    if (attachment.isImage) {
+      return Icons.image;
+    }
+    
+    switch (attachment.fileExtension) {
       case 'pdf':
         return Icons.picture_as_pdf;
       case 'doc':
@@ -744,37 +833,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         return Icons.description;
       case 'txt':
         return Icons.text_snippet;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-        return Icons.image;
       default:
         return Icons.insert_drive_file;
-    }
-  }
-
-  // 预览图片
-  void _previewImage(String imagePath) {
-    context.push(
-      '/image-preview?path=${Uri.encodeComponent(imagePath)}&title=${Uri.encodeComponent('证明图片')}',
-    );
-  }
-
-  // 预览文件
-  void _previewFile(String filePath) {
-    final extension = filePath.split('.').last.toLowerCase();
-    final fileName = _getFileName(filePath);
-    
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension)) {
-      // 如果是图片文件，使用图片预览
-      context.push(
-        '/image-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent('证明图片')}',
-      );
-    } else {
-      // 其他文件使用文档预览
-      context.push(
-        '/document-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent(fileName)}',
-      );
     }
   }
 
@@ -801,8 +861,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           isCollective: _isCollective,
           isLeader: _isLeader,
           participantCount: int.parse(_participantCountController.text),
-          imagePath: _selectedImagePath,
-          filePath: _selectedFilePath,
+          imagePath: null, // 不再使用单一文件路径
+          filePath: null, // 不再使用单一文件路径
           remarks: _remarksController.text.trim(),
           createdAt: _currentItem?.createdAt ?? now,
           updatedAt: now,
@@ -812,8 +872,26 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         if (isEditing) {
           await _assessmentItemDao.updateItem(item);
           itemId = item.id!;
+          
+          // 获取旧的文件附件并删除物理文件
+          final oldAttachments = await _fileAttachmentDao.getAttachmentsByItemId(itemId);
+          for (final oldAttachment in oldAttachments) {
+            await _fileManager.deleteFile(oldAttachment.filePath);
+          }
+          
+          // 删除旧的文件附件记录
+          await _fileAttachmentDao.deleteAttachmentsByItemId(itemId);
         } else {
           itemId = await _assessmentItemDao.insertItem(item);
+        }
+        
+        // 保存文件附件
+        if (_attachments.isNotEmpty) {
+          final attachmentsToSave = _attachments.map((attachment) => 
+            attachment.copyWith(assessmentItemId: itemId)
+          ).toList();
+          
+          await _fileAttachmentDao.insertAttachments(attachmentsToSave);
         }
         
         // 保存标签关联
@@ -896,11 +974,12 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     });
     
     try {
-      await _assessmentItemDao.deleteItem(_currentItem!.id!);
+      // 使用删除服务完整删除条目及其所有文件
+      await _deletionService.deleteAssessmentItem(_currentItem!.id!);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已删除条目「${_currentItem!.title}」')),
+          SnackBar(content: Text('已删除条目「${_currentItem!.title}」及其所有证明材料')),
         );
         // 触发数据变更事件
         _eventBus.emit(AppEvent.assessmentItemChanged);

@@ -10,6 +10,7 @@ import '../services/assessment_item_dao.dart';
 import '../services/category_dao.dart';
 import '../services/subcategory_dao.dart';
 import '../services/level_dao.dart';
+import '../services/assessment_deletion_service.dart';
 import '../services/event_bus.dart';
 
 class AssessmentListPage extends StatefulWidget {
@@ -24,6 +25,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
   final CategoryDao _categoryDao = CategoryDao();
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
   final LevelDao _levelDao = LevelDao();
+  final AssessmentItemDeletionService _deletionService = AssessmentItemDeletionService();
   final EventBus _eventBus = EventBus();
   
   List<AssessmentItem> _items = [];
@@ -723,11 +725,12 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
   // 删除条目
   Future<void> _deleteItem(AssessmentItem item) async {
     try {
-      await _assessmentItemDao.deleteItem(item.id!);
+      // 使用删除服务完整删除条目及其所有文件
+      await _deletionService.deleteAssessmentItem(item.id!);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已删除条目「${item.title}」')),
+          SnackBar(content: Text('已删除条目「${item.title}」及其所有证明材料')),
         );
         // 触发数据变更事件
         _eventBus.emit(AppEvent.assessmentItemChanged);
