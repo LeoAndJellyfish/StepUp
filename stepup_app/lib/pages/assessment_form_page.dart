@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../models/assessment_item.dart';
 import '../models/category.dart';
@@ -55,6 +57,11 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   bool _isCollective = false;
   bool _isLeader = false;
   
+  // 证明材料相关
+  String? _selectedImagePath;
+  String? _selectedFilePath;
+  final ImagePicker _imagePicker = ImagePicker();
+  
   bool _isLoading = true;
   bool _isSaving = false;
   AssessmentItem? _currentItem;
@@ -92,6 +99,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           _isAwarded = item.isAwarded;
           _isCollective = item.isCollective;
           _isLeader = item.isLeader;
+          _selectedImagePath = item.imagePath;
+          _selectedFilePath = item.filePath;
           
           // 加载条目的标签
           if (item.id != null) {
@@ -410,6 +419,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                     _buildTagsSection(),
                     const SizedBox(height: AppTheme.spacing16),
                     
+                    // 证明材料
+                    _buildProofMaterialsSection(),
+                    const SizedBox(height: AppTheme.spacing16),
+                    
                     // 备注
                     TextFormField(
                       controller: _remarksController,
@@ -470,6 +483,154 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     );
   }
 
+  // 构建证明材料上传区域
+  Widget _buildProofMaterialsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '证明材料',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacing8),
+        
+        // 证明图片
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.image, size: 20),
+                    const SizedBox(width: AppTheme.spacing8),
+                    const Text('证明图片', style: TextStyle(fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.add_photo_alternate, size: 18),
+                      label: const Text('选择图片'),
+                    ),
+                  ],
+                ),
+                if (_selectedImagePath != null) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spacing8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.image, size: 16, color: Colors.green),
+                        const SizedBox(width: AppTheme.spacing8),
+                        Expanded(
+                          child: Text(
+                            _getFileName(_selectedImagePath!),
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _previewImage(_selectedImagePath!),
+                          icon: const Icon(Icons.visibility, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          tooltip: '预览图片',
+                        ),
+                        IconButton(
+                          onPressed: _removeImage,
+                          icon: const Icon(Icons.close, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacing8),
+        
+        // 证明文件
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.attach_file, size: 20),
+                    const SizedBox(width: AppTheme.spacing8),
+                    const Text('证明文件', style: TextStyle(fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _pickFile,
+                      icon: const Icon(Icons.upload_file, size: 18),
+                      label: const Text('选择文件'),
+                    ),
+                  ],
+                ),
+                if (_selectedFilePath != null) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spacing8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(_getFileIcon(_selectedFilePath!), size: 16, color: Colors.blue),
+                        const SizedBox(width: AppTheme.spacing8),
+                        Expanded(
+                          child: Text(
+                            _getFileName(_selectedFilePath!),
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _previewFile(_selectedFilePath!),
+                          icon: const Icon(Icons.visibility, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          tooltip: '预览文件',
+                        ),
+                        IconButton(
+                          onPressed: _removeFile,
+                          icon: const Icon(Icons.close, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppTheme.spacing4),
+                Text(
+                  '支持格式：PDF、Word、文本、图片',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // 加载子分类
   Future<void> _loadSubcategories(int categoryId) async {
     try {
@@ -506,6 +667,117 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     }
   }
 
+  // 选择证明图片
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择图片失败: $e')),
+        );
+      }
+    }
+  }
+
+  // 选择证明文件
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'],
+        allowMultiple: false,
+      );
+      
+      if (result != null && result.files.single.path != null) {
+        setState(() {
+          _selectedFilePath = result.files.single.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择文件失败: $e')),
+        );
+      }
+    }
+  }
+
+  // 移除证明图片
+  void _removeImage() {
+    setState(() {
+      _selectedImagePath = null;
+    });
+  }
+
+  // 移除证明文件
+  void _removeFile() {
+    setState(() {
+      _selectedFilePath = null;
+    });
+  }
+
+  // 获取文件名
+  String _getFileName(String filePath) {
+    return filePath.split('/').last.split('\\').last;
+  }
+
+  // 获取文件图标
+  IconData _getFileIcon(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'txt':
+        return Icons.text_snippet;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return Icons.image;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  // 预览图片
+  void _previewImage(String imagePath) {
+    context.push(
+      '/image-preview?path=${Uri.encodeComponent(imagePath)}&title=${Uri.encodeComponent('证明图片')}',
+    );
+  }
+
+  // 预览文件
+  void _previewFile(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    final fileName = _getFileName(filePath);
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension)) {
+      // 如果是图片文件，使用图片预览
+      context.push(
+        '/image-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent('证明图片')}',
+      );
+    } else {
+      // 其他文件使用文档预览
+      context.push(
+        '/document-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent(fileName)}',
+      );
+    }
+  }
+
   Future<void> _saveItem() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -529,6 +801,8 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           isCollective: _isCollective,
           isLeader: _isLeader,
           participantCount: int.parse(_participantCountController.text),
+          imagePath: _selectedImagePath,
+          filePath: _selectedFilePath,
           remarks: _remarksController.text.trim(),
           createdAt: _currentItem?.createdAt ?? now,
           updatedAt: now,

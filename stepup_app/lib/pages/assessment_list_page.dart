@@ -312,6 +312,64 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                   ),
                 ],
               ),
+              // 证明材料指示器
+              if (item.imagePath != null || item.filePath != null) ...[
+                const SizedBox(height: AppTheme.spacing8),
+                InkWell(
+                  onTap: () => _showProofMaterialsDialog(item),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacing8,
+                      vertical: AppTheme.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.attachment,
+                          size: 14,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: AppTheme.spacing4),
+                        Text(
+                          '已上传证明材料',
+                          style: AppTheme.bodySmall.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (item.imagePath != null) ...[
+                          const SizedBox(width: AppTheme.spacing4),
+                          Icon(
+                            Icons.image,
+                            size: 12,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ],
+                        if (item.filePath != null) ...[
+                          const SizedBox(width: AppTheme.spacing4),
+                          Icon(
+                            Icons.attach_file,
+                            size: 12,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ],
+                        const SizedBox(width: AppTheme.spacing4),
+                        Icon(
+                          Icons.visibility,
+                          size: 12,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -551,6 +609,115 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         ],
       ),
     );
+  }
+
+  // 显示证明材料预览对话框
+  void _showProofMaterialsDialog(AssessmentItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('证明材料'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (item.imagePath != null) ...[
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.image, color: Colors.green),
+                    title: const Text('证明图片'),
+                    subtitle: Text(_getFileName(item.imagePath!)),
+                    trailing: IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _previewImage(item.imagePath!);
+                      },
+                      icon: const Icon(Icons.visibility),
+                      tooltip: '预览图片',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (item.filePath != null) ...[
+                Card(
+                  child: ListTile(
+                    leading: Icon(_getFileIcon(item.filePath!), color: Colors.blue),
+                    title: const Text('证明文件'),
+                    subtitle: Text(_getFileName(item.filePath!)),
+                    trailing: IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _previewFile(item.filePath!);
+                      },
+                      icon: const Icon(Icons.visibility),
+                      tooltip: '预览文件',
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 预览图片
+  void _previewImage(String imagePath) {
+    context.push(
+      '/image-preview?path=${Uri.encodeComponent(imagePath)}&title=${Uri.encodeComponent('证明图片')}',
+    );
+  }
+
+  // 预览文件
+  void _previewFile(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    final fileName = _getFileName(filePath);
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension)) {
+      // 如果是图片文件，使用图片预览
+      context.push(
+        '/image-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent('证明图片')}',
+      );
+    } else {
+      // 其他文件使用文档预览
+      context.push(
+        '/document-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent(fileName)}',
+      );
+    }
+  }
+
+  // 获取文件名
+  String _getFileName(String filePath) {
+    return filePath.split('/').last.split('\\').last;
+  }
+
+  // 获取文件图标
+  IconData _getFileIcon(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'txt':
+        return Icons.text_snippet;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return Icons.image;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 
   // 删除条目

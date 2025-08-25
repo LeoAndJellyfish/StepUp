@@ -6,6 +6,8 @@ import '../pages/assessment_form_page.dart';
 import '../pages/statistics_page.dart';
 import '../pages/categories_page.dart';
 import '../pages/settings_page.dart';
+import '../pages/image_preview_page.dart';
+import '../pages/document_preview_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -79,6 +81,66 @@ class AppRouter {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsPage(),
+      ),
+      // 图片预览页面
+      GoRoute(
+        path: '/image-preview',
+        name: 'image-preview',
+        builder: (context, state) {
+          final imagePath = state.uri.queryParameters['path'];
+          final title = state.uri.queryParameters['title'];
+          
+          if (imagePath == null || imagePath.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('错误')),
+              body: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text('缺少图片路径参数'),
+                  ],
+                ),
+              ),
+            );
+          }
+          
+          return ImagePreviewPage(
+            imagePath: imagePath,
+            title: title,
+          );
+        },
+      ),
+      // 文档预览页面
+      GoRoute(
+        path: '/document-preview',
+        name: 'document-preview',
+        builder: (context, state) {
+          final documentPath = state.uri.queryParameters['path'];
+          final title = state.uri.queryParameters['title'];
+          
+          if (documentPath == null || documentPath.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('错误')),
+              body: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text('缺少文档路径参数'),
+                  ],
+                ),
+              ),
+            );
+          }
+          
+          return DocumentPreviewPage(
+            documentPath: documentPath,
+            title: title,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
