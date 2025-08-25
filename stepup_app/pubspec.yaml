@@ -61,6 +61,9 @@ dependencies:
   
   # 图片选择
   image_picker: ^1.0.4
+  
+  # 路径管理
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:

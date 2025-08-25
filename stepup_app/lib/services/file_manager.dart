@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 /// 文件管理服务类
@@ -13,13 +14,7 @@ class FileManager {
 
   /// 获取应用文档目录
   Future<Directory> get _documentsDirectory async {
-    // 在实际项目中，应该使用 path_provider 包来获取正确的目录
-    // 这里使用临时实现
-    final directory = Directory('${Directory.current.path}/documents');
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
-    return directory;
+    return await getApplicationDocumentsDirectory();
   }
 
   /// 获取证明材料存储目录
