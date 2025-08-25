@@ -8,6 +8,8 @@ import '../pages/categories_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/image_preview_page.dart';
 import '../pages/document_preview_page.dart';
+import '../pages/category_detail_page.dart';
+import '../models/category.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -71,6 +73,31 @@ class AppRouter {
                 path: '/categories',
                 name: 'categories',
                 builder: (context, state) => const CategoriesPage(),
+                routes: [
+                  GoRoute(
+                    path: 'detail/:id',
+                    name: 'category-detail',
+                    builder: (context, state) {
+                      final categoryData = state.extra as Category?;
+                      if (categoryData == null) {
+                        return Scaffold(
+                          appBar: AppBar(title: const Text('错误')),
+                          body: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                                SizedBox(height: 16),
+                                Text('缺少分类数据'),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return CategoryDetailPage(category: categoryData);
+                    },
+                  ),
+                ],
               ),
             ],
           ),

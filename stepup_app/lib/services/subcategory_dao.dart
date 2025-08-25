@@ -9,7 +9,7 @@ class SubcategoryDao {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'subcategories',
-      orderBy: 'category_id, name',
+      orderBy: 'category_id, code',
     );
 
     return List.generate(maps.length, (i) {
@@ -24,7 +24,7 @@ class SubcategoryDao {
       'subcategories',
       where: 'category_id = ?',
       whereArgs: [categoryId],
-      orderBy: 'name',
+      orderBy: 'code',
     );
 
     return List.generate(maps.length, (i) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
 import '../models/category.dart';
@@ -100,7 +101,11 @@ class _CategoriesPageState extends State<CategoriesPage> {
             subtitle: Text(category.description),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              // 分类详情页面将在后续实现
+              // 跳转到分类详情页面
+              context.push(
+                '/categories/detail/${category.id}',
+                extra: category,
+              );
             },
           ),
         );
