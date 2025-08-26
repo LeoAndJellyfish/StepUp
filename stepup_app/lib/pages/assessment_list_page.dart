@@ -11,6 +11,7 @@ import '../services/category_dao.dart';
 import '../services/subcategory_dao.dart';
 import '../services/level_dao.dart';
 import '../services/assessment_deletion_service.dart';
+import '../services/proof_materials_export_service.dart';
 import '../services/event_bus.dart';
 
 class AssessmentListPage extends StatefulWidget {
@@ -26,6 +27,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
   final LevelDao _levelDao = LevelDao();
   final AssessmentItemDeletionService _deletionService = AssessmentItemDeletionService();
+  final ProofMaterialsExportService _exportService = ProofMaterialsExportService();
   final EventBus _eventBus = EventBus();
   
   List<AssessmentItem> _items = [];
@@ -35,6 +37,11 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
   
   bool _isLoading = true;
   String? _error;
+  
+  // 导出状态
+  bool _isExporting = false;
+  double _exportProgress = 0.0;
+  String _exportMessage = '';
   
   // 筛选条件
   int? _selectedCategoryId;
@@ -118,6 +125,11 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
       appBar: AppBar(
         title: const Text('综测条目'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _showExportDialog,
+            tooltip: '导出证明材料',
+          ),
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _showFilterDialog,
@@ -729,5 +741,178 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         );
       }
     }
+  }
+
+  // 显示导出对话框
+  void _showExportDialog() async {
+    try {
+      // 获取导出统计信息
+      final stats = await _exportService.getExportStatistics();
+      
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('导出证明材料'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('将导出所有条目的证明材料，并按条目名称重命名后打包：'),
+              const SizedBox(height: 16),
+              Text('• 总条目数：${stats['totalItems']} 个'),
+              Text('• 有证明材料的条目：${stats['itemsWithProof']} 个'),
+              Text('• 证明材料文件数：${stats['totalFiles']} 个'),
+              const SizedBox(height: 16),
+              if (_isExporting) ...[
+                const LinearProgressIndicator(),
+                const SizedBox(height: 8),
+                Text(
+                  _exportMessage,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  '${(_exportProgress * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ] else
+                const Text(
+                  '注意：导出过程可能需要一些时间，请耐心等待。进度信息将通过通知显示。',
+                  style: TextStyle(color: Colors.orange),
+                ),
+            ],
+          ),
+          actions: [
+            if (!_isExporting) ...[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: (stats['itemsWithProof'] ?? 0) > 0 ? () {
+                  Navigator.of(context).pop();
+                  _startExport();
+                } : null,
+                child: const Text('开始导出'),
+              ),
+            ] else
+              TextButton(
+                onPressed: null, // 导出过程中禁用按钮
+                child: const Text('正在导出...'),
+              ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('获取导出信息失败: $e')),
+        );
+      }
+    }
+  }
+
+  // 开始导出
+  void _startExport() async {
+    // 在异步操作开始前获取所需的引用
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    if (!mounted) return;
+
+    setState(() {
+      _isExporting = true;
+      _exportProgress = 0.0;
+      _exportMessage = '准备导出...';
+    });
+
+    try {
+      // 直接执行导出，不显示进度对话框
+      final outputPath = await _exportService.exportAllProofMaterials(
+        progressCallback: (progress, message) {
+          if (mounted) {
+            setState(() {
+              _exportProgress = progress;
+              _exportMessage = message;
+            });
+            
+            // 使用预先获取的ScaffoldMessenger
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('导出进度: ${(progress * 100).toStringAsFixed(1)}% - $message'),
+                duration: const Duration(milliseconds: 500),
+              ),
+            );
+          }
+        },
+      );
+
+      if (mounted) {
+        // 显示成功消息
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('已导出所有证明材料: ${outputPath.split('\\').last}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: '查看位置',
+              onPressed: () {
+                _showExportSuccessDialog(outputPath);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('导出失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportProgress = 0.0;
+          _exportMessage = '';
+        });
+      }
+    }
+  }
+
+  // 显示导出成功对话框
+  void _showExportSuccessDialog(String outputPath) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导出成功'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('证明材料已成功导出！'),
+            const SizedBox(height: 8),
+            SelectableText(
+              '保存位置：$outputPath',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 }

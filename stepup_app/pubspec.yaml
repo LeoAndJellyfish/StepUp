@@ -67,6 +67,9 @@ dependencies:
   
   # 外部应用启动
   url_launcher: ^6.2.2
+  
+  # 文件压缩
+  archive: ^3.4.9
 
 dev_dependencies:
   flutter_test:
