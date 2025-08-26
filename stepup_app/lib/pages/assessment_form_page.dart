@@ -877,14 +877,47 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           await _assessmentItemDao.updateItem(item);
           itemId = item.id!;
           
-          // 获取旧的文件附件并删除物理文件
-          final oldAttachments = await _fileAttachmentDao.getAttachmentsByItemId(itemId);
-          for (final oldAttachment in oldAttachments) {
-            await _fileManager.deleteFile(oldAttachment.filePath);
+          // 正确处理附件更新逻辑
+          // 1. 获取数据库中现有的附件
+          final existingAttachments = await _fileAttachmentDao.getAttachmentsByItemId(itemId);
+          
+          // 2. 识别需要删除的附件（在数据库中但不在当前列表中）
+          final currentAttachmentPaths = _attachments.map((a) => a.filePath).toSet();
+          final existingAttachmentPaths = existingAttachments.map((a) => a.filePath).toSet();
+          final pathsToDelete = existingAttachmentPaths.difference(currentAttachmentPaths);
+          
+          // 3. 删除需要删除的物理文件
+          for (final filePath in pathsToDelete) {
+            await _fileManager.deleteFile(filePath);
           }
           
-          // 删除旧的文件附件记录
-          await _fileAttachmentDao.deleteAttachmentsByItemId(itemId);
+          // 4. 删除需要删除的数据库记录
+          for (final existingAttachment in existingAttachments) {
+            if (pathsToDelete.contains(existingAttachment.filePath)) {
+              await _fileAttachmentDao.deleteAttachment(existingAttachment.id!);
+            }
+          }
+          
+          // 5. 插入新的附件（不在数据库中但在当前列表中的附件）
+          final newAttachments = _attachments.where((attachment) => 
+            !existingAttachmentPaths.contains(attachment.filePath)
+          ).toList();
+          
+          if (newAttachments.isNotEmpty) {
+            final attachmentsToSave = newAttachments.map((attachment) => 
+              attachment.copyWith(assessmentItemId: itemId)
+            ).toList();
+            await _fileAttachmentDao.insertAttachments(attachmentsToSave);
+          }
+          
+          // 6. 更新现有的附件（保持它们在数据库中的记录）
+          final existingAttachmentsToUpdate = _attachments.where((attachment) => 
+            attachment.id != null && existingAttachmentPaths.contains(attachment.filePath)
+          ).toList();
+          
+          for (final attachment in existingAttachmentsToUpdate) {
+            await _fileAttachmentDao.updateAttachment(attachment.copyWith(assessmentItemId: itemId));
+          }
         } else {
           itemId = await _assessmentItemDao.insertItem(item);
         }
