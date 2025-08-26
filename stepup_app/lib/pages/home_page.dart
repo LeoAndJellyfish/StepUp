@@ -168,7 +168,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: AppTheme.spacing12),
         SizedBox(
-          height: 120, // 固定高度以防止溢出
+          height: 140, // 固定高度以防止溢出，增加高度以防止数字被遮挡
           child: Row(
             children: [
               Expanded(
