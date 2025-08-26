@@ -335,9 +335,26 @@ class DataExportService {
           if (categoryData is Map<String, dynamic>) {
             try {
               final category = app_models.Category.fromMap(categoryData);
-              await _categoryDao.insertCategory(category);
+              // 处理ID冲突：先查询是否存在相同ID的分类
+              if (category.id != null) {
+                final existingCategory = await _categoryDao.getCategoryById(category.id!);
+                if (existingCategory != null) {
+                  // 存在相同ID的分类，更新而不是插入
+                  await _categoryDao.updateCategory(category);
+                  debugPrint('更新现有分类: ${category.name} (ID: ${category.id})');
+                } else {
+                  // 不存在相同ID的分类，直接插入
+                  await _categoryDao.insertCategory(category);
+                  debugPrint('插入新分类: ${category.name} (ID: ${category.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                await _categoryDao.insertCategory(category);
+                debugPrint('插入新分类: ${category.name}');
+              }
             } catch (e) {
               debugPrint('导入分类数据失败: $e');
+              progressCallback?.call(0.25, '导入分类数据失败: ${e.toString()}', isError: true);
               // 继续导入其他分类数据
             }
           }
@@ -352,9 +369,26 @@ class DataExportService {
           if (subcategoryData is Map<String, dynamic>) {
             try {
               final subcategory = Subcategory.fromMap(subcategoryData);
-              await _subcategoryDao.insertSubcategory(subcategory);
+              // 处理ID冲突：先查询是否存在相同ID的子分类
+              if (subcategory.id != null) {
+                final existingSubcategory = await _subcategoryDao.getSubcategoryById(subcategory.id!);
+                if (existingSubcategory != null) {
+                  // 存在相同ID的子分类，更新而不是插入
+                  await _subcategoryDao.updateSubcategory(subcategory);
+                  debugPrint('更新现有子分类: ${subcategory.name} (ID: ${subcategory.id})');
+                } else {
+                  // 不存在相同ID的子分类，直接插入
+                  await _subcategoryDao.insertSubcategory(subcategory);
+                  debugPrint('插入新子分类: ${subcategory.name} (ID: ${subcategory.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                await _subcategoryDao.insertSubcategory(subcategory);
+                debugPrint('插入新子分类: ${subcategory.name}');
+              }
             } catch (e) {
               debugPrint('导入子分类数据失败: $e');
+              progressCallback?.call(0.3, '导入子分类数据失败: ${e.toString()}', isError: true);
               // 继续导入其他子分类数据
             }
           }
@@ -369,9 +403,26 @@ class DataExportService {
           if (levelData is Map<String, dynamic>) {
             try {
               final level = Level.fromMap(levelData);
-              await _levelDao.insertLevel(level);
+              // 处理ID冲突：先查询是否存在相同ID的级别
+              if (level.id != null) {
+                final existingLevel = await _levelDao.getLevelById(level.id!);
+                if (existingLevel != null) {
+                  // 存在相同ID的级别，更新而不是插入
+                  await _levelDao.updateLevel(level);
+                  debugPrint('更新现有级别: ${level.name} (ID: ${level.id})');
+                } else {
+                  // 不存在相同ID的级别，直接插入
+                  await _levelDao.insertLevel(level);
+                  debugPrint('插入新级别: ${level.name} (ID: ${level.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                await _levelDao.insertLevel(level);
+                debugPrint('插入新级别: ${level.name}');
+              }
             } catch (e) {
               debugPrint('导入级别数据失败: $e');
+              progressCallback?.call(0.35, '导入级别数据失败: ${e.toString()}', isError: true);
               // 继续导入其他级别数据
             }
           }
@@ -386,9 +437,26 @@ class DataExportService {
           if (tagData is Map<String, dynamic>) {
             try {
               final tag = Tag.fromMap(tagData);
-              await _tagDao.insertTag(tag);
+              // 处理ID冲突：先查询是否存在相同ID的标签
+              if (tag.id != null) {
+                final existingTag = await _tagDao.getTagById(tag.id!);
+                if (existingTag != null) {
+                  // 存在相同ID的标签，更新而不是插入
+                  await _tagDao.updateTag(tag);
+                  debugPrint('更新现有标签: ${tag.name} (ID: ${tag.id})');
+                } else {
+                  // 不存在相同ID的标签，直接插入
+                  await _tagDao.insertTag(tag);
+                  debugPrint('插入新标签: ${tag.name} (ID: ${tag.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                await _tagDao.insertTag(tag);
+                debugPrint('插入新标签: ${tag.name}');
+              }
             } catch (e) {
               debugPrint('导入标签数据失败: $e');
+              progressCallback?.call(0.4, '导入标签数据失败: ${e.toString()}', isError: true);
               // 继续导入其他标签数据
             }
           }
@@ -405,13 +473,34 @@ class DataExportService {
           if (itemData is Map<String, dynamic>) {
             try {
               final item = AssessmentItem.fromMap(itemData);
-              final newId = await _assessmentItemDao.insertItem(item);
+              int newId;
+              
+              // 处理ID冲突：先查询是否存在相同ID的条目
+              if (item.id != null) {
+                final existingItem = await _assessmentItemDao.getItemById(item.id!);
+                if (existingItem != null && !replaceExisting) {
+                  // 存在相同ID的条目且不是替换模式，执行更新
+                  await _assessmentItemDao.updateItem(item);
+                  newId = item.id!;
+                  debugPrint('更新现有条目: ${item.title} (ID: ${item.id})');
+                } else {
+                  // 不存在相同ID的条目，或是替换模式，执行插入
+                  newId = await _assessmentItemDao.insertItem(item);
+                  debugPrint('插入新条目: ${item.title} (ID: $newId，原ID: ${item.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                newId = await _assessmentItemDao.insertItem(item);
+                debugPrint('插入新条目: ${item.title} (ID: $newId)');
+              }
+              
               // 记录ID映射（如果原数据有ID）
               if (itemData['id'] != null) {
                 itemIdMap[itemData['id']] = newId;
               }
             } catch (e) {
               debugPrint('导入条目数据失败: $e');
+              progressCallback?.call(0.5, '导入条目数据失败: ${e.toString()}', isError: true);
               // 继续导入其他条目数据
             }
           }
