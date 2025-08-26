@@ -12,6 +12,7 @@ import 'assessment_item_dao.dart';
 import 'file_attachment_dao.dart';
 import 'category_dao.dart';
 import 'subcategory_dao.dart';
+import 'user_dao.dart';
 
 /// 证明材料导出进度回调
 typedef ExportProgressCallback = void Function(double progress, String message);
@@ -23,6 +24,7 @@ class ProofMaterialsExportService {
   final FileAttachmentDao _fileAttachmentDao = FileAttachmentDao();
   final CategoryDao _categoryDao = CategoryDao();
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
+  final UserDao _userDao = UserDao();
 
   /// 导出所有条目的证明材料
   /// [outputPath] 导出文件路径（可选，默认为下载目录）
@@ -243,7 +245,20 @@ class ProofMaterialsExportService {
     final timestamp = DateTime.now();
     final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
     final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}';
-    final fileName = 'StepUp证明材料_${dateStr}_$timeStr.zip';
+    
+    // 获取用户名（如果存在）
+    String userNamePart = '';
+    try {
+      final user = await _userDao.getFirstUser();
+      if (user != null && user.name.isNotEmpty) {
+        userNamePart = '${user.name}_';
+      }
+    } catch (e) {
+      debugPrint('获取用户名失败: $e');
+    }
+    
+    // 创建包含用户名的文件名
+    final fileName = 'StepUp证明材料_$userNamePart${dateStr}_$timeStr.zip';
 
     String finalOutputPath;
     if (outputPath != null) {

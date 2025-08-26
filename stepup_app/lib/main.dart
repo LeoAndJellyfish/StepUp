@@ -7,6 +7,7 @@ import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 import 'services/database_helper.dart';
 import 'services/file_manager.dart';
+import 'services/user_dao.dart';
 
 void main() async {
   // 确保Flutter绑定初始化
@@ -35,6 +36,15 @@ void main() async {
   final fileManager = FileManager();
   await fileManager.migrateProofMaterials();
   
+  // 检查是否存在用户
+  final userDao = UserDao();
+  final hasUser = await userDao.hasUsers();
+  
+  // 设置初始路由
+  if (!hasUser) {
+    AppRouter.setInitialRoute('/welcome');
+  }
+  
   runApp(const MyApp());
 }
 
@@ -49,6 +59,9 @@ class MyApp extends StatelessWidget {
         Provider<DatabaseHelper>(
           create: (context) => DatabaseHelper(),
           dispose: (context, db) => db.close(),
+        ),
+        Provider<UserDao>(
+          create: (context) => UserDao(),
         ),
       ],
       child: MaterialApp.router(

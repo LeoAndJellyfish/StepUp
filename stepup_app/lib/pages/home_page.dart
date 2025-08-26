@@ -4,6 +4,7 @@ import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
 import '../services/assessment_item_dao.dart';
 import '../services/event_bus.dart';
+import '../services/user_dao.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,17 +16,34 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
   final EventBus _eventBus = EventBus();
+  final UserDao _userDao = UserDao();
   
   Map<String, dynamic>? _statistics;
   bool _isLoading = true;
   String? _error;
+  String? _userName; // 存储用户名
 
   @override
   void initState() {
     super.initState();
     _loadStatistics();
+    _loadUserName(); // 加载用户名
     // 监听数据变更事件
     _eventBus.on(AppEvent.assessmentItemChanged, _loadStatistics);
+  }
+  
+  // 加载用户名
+  Future<void> _loadUserName() async {
+    try {
+      final user = await _userDao.getFirstUser();
+      if (user != null) {
+        setState(() {
+          _userName = user.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('加载用户名失败: $e');
+    }
   }
 
   @override
@@ -140,7 +158,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$greeting！',
+              '$greeting，${_userName ?? '同学'}！',
               style: AppTheme.headlineSmall,
             ),
             const SizedBox(height: AppTheme.spacing8),

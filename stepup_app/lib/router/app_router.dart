@@ -9,12 +9,41 @@ import '../pages/settings_page.dart';
 import '../pages/image_preview_page.dart';
 import '../pages/document_preview_page.dart';
 import '../pages/category_detail_page.dart';
+import '../pages/user_onboarding_page.dart';
+import '../pages/first_time_welcome_page.dart';
+import '../pages/user_profile_edit_page.dart';
 import '../models/category.dart';
 
 class AppRouter {
+  // 初始路由，默认是首页
+  static String _initialLocation = '/home';
+  
+  // 设置初始路由
+  static void setInitialRoute(String route) {
+    _initialLocation = route;
+  }
+  
   static final GoRouter router = GoRouter(
-    initialLocation: '/home',
+    initialLocation: _initialLocation,
     routes: [
+      // 用户引导页面（独立页面）
+  GoRoute(
+    path: '/onboarding',
+    name: 'onboarding',
+    builder: (context, state) => const UserOnboardingPage(),
+  ),
+  // 首次欢迎页面（简化版）
+  GoRoute(
+    path: '/welcome',
+    name: 'welcome',
+    builder: (context, state) => const FirstTimeWelcomePage(),
+  ),
+  // 用户信息编辑页面
+  GoRoute(
+    path: '/profile/edit',
+    name: 'profile-edit',
+    builder: (context, state) => const UserProfileEditPage(),
+  ),
       // 底部导航栏的主要页面
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
