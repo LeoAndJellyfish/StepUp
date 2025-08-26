@@ -597,7 +597,24 @@ class DataExportService {
                 final attachment = FileAttachment.fromMap(attachmentData);
                 // 更新关联的条目ID
                 final updatedAttachment = attachment.copyWith(assessmentItemId: newItemId);
-                await _fileAttachmentDao.insertAttachment(updatedAttachment);
+                
+                // 处理ID冲突：先查询是否存在相同ID的附件
+                if (updatedAttachment.id != null) {
+                  final existingAttachment = await _fileAttachmentDao.getAttachmentById(updatedAttachment.id!);
+                  if (existingAttachment != null) {
+                    // 存在相同ID的附件，更新而不是插入
+                    await _fileAttachmentDao.updateAttachment(updatedAttachment);
+                    debugPrint('更新现有附件: ${updatedAttachment.fileName} (ID: ${updatedAttachment.id})');
+                  } else {
+                    // 不存在相同ID的附件，直接插入
+                    await _fileAttachmentDao.insertAttachment(updatedAttachment);
+                    debugPrint('插入新附件: ${updatedAttachment.fileName} (ID: ${updatedAttachment.id})');
+                  }
+                } else {
+                  // 没有指定ID，直接插入
+                  await _fileAttachmentDao.insertAttachment(updatedAttachment);
+                  debugPrint('插入新附件: ${updatedAttachment.fileName}');
+                }
               } catch (e) {
                 debugPrint('导入附件数据失败: $e');
                 // 继续导入其他附件数据
