@@ -172,11 +172,12 @@ class AssessmentItemDao {
 
     final String whereClause = whereClauses.isEmpty ? '' : 'WHERE ${whereClauses.join(' AND ')}';
 
-    // 获取总数、总时长
+    // 获取总数、总时长、获奖条目数
     final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT 
         COUNT(*) as total_count,
-        SUM(duration) as total_duration
+        SUM(duration) as total_duration,
+        SUM(CASE WHEN is_awarded = 1 THEN 1 ELSE 0 END) as awarded_count
       FROM assessment_items 
       $whereClause
     ''', whereArgs);
@@ -217,6 +218,7 @@ class AssessmentItemDao {
     return {
       'totalCount': result.first['total_count'] ?? 0,
       'totalDuration': result.first['total_duration'] ?? 0.0,
+      'awardedCount': result.first['awarded_count'] ?? 0,
       'categoryStats': categoryResult,
     };
   }

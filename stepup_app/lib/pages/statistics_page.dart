@@ -199,21 +199,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    '总时长',
-                    '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}',
-                    '小时',
-                    Icons.access_time,
+                    '平均时长',
+                    '${stats['totalCount'] > 0 ? ((stats['totalDuration'] ?? 0.0) / stats['totalCount']).toStringAsFixed(1) : '0.0'}',
+                    '小时/个',
+                    Icons.timer,
                     theme.colorScheme.tertiary,
                   ),
                 ),
                 const SizedBox(width: AppTheme.spacing12),
                 Expanded(
                   child: _buildStatCard(
-                    '平均分数',
-                    '${stats['totalCount'] > 0 ? ((stats['totalScore'] ?? 0.0) / stats['totalCount']).toStringAsFixed(1) : '0.0'}',
-                    '分',
-                    Icons.trending_up,
-                    theme.colorScheme.outline,
+                    '获奖条目',
+                    '${stats['awardedCount'] ?? 0}',
+                    '个',
+                    Icons.emoji_events,
+                    Colors.amber,
                   ),
                 ),
               ],
