@@ -920,15 +920,15 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           }
         } else {
           itemId = await _assessmentItemDao.insertItem(item);
-        }
-        
-        // 保存文件附件
-        if (_attachments.isNotEmpty) {
-          final attachmentsToSave = _attachments.map((attachment) => 
-            attachment.copyWith(assessmentItemId: itemId)
-          ).toList();
           
-          await _fileAttachmentDao.insertAttachments(attachmentsToSave);
+          // 保存文件附件（仅在新增模式下）
+          if (_attachments.isNotEmpty) {
+            final attachmentsToSave = _attachments.map((attachment) => 
+              attachment.copyWith(assessmentItemId: itemId)
+            ).toList();
+            
+            await _fileAttachmentDao.insertAttachments(attachmentsToSave);
+          }
         }
         
         // 保存标签关联
