@@ -38,107 +38,133 @@ class _SettingsPageState extends State<SettingsPage> {
   // 显示导出数据对话框
   Future<void> _showExportDialog() async {
     final stats = await _dataExportService.getExportStatistics();
+    bool includeFiles = true; // 默认包含文件内容
     
     if (!mounted) return;
     
     return showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('数据导出'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('导出统计信息：'),
-              const SizedBox(height: 8),
-              Text('用户: ${stats['users']} 个'),
-              Text('分类: ${stats['categories']} 个'),
-              Text('子分类: ${stats['subcategories']} 个'),
-              Text('级别: ${stats['levels']} 个'),
-              Text('标签: ${stats['tags']} 个'),
-              Text('条目: ${stats['items']} 个'),
-              Text('附件: ${stats['attachments']} 个'),
-              const SizedBox(height: 16),
-              const Text('注意：导出的文件将保存到应用文档目录'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _startExport();
-              },
-              child: const Text('开始导出'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('数据导出'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('导出统计信息：'),
+                  const SizedBox(height: 8),
+                  Text('用户: ${stats['users']} 个'),
+                  Text('分类: ${stats['categories']} 个'),
+                  Text('子分类: ${stats['subcategories']} 个'),
+                  Text('级别: ${stats['levels']} 个'),
+                  Text('标签: ${stats['tags']} 个'),
+                  Text('条目: ${stats['items']} 个'),
+                  Text('附件: ${stats['attachments']} 个'),
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: const Text('包含附件文件内容'),
+                    subtitle: const Text('加入所有证明材料的实际内容，导出文件将更大'),
+                    value: includeFiles,
+                    onChanged: (value) {
+                      setState(() {
+                        includeFiles = value ?? true;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('注意：导出的文件将保存到应用文档目录'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _startExport(includeFiles: includeFiles);
+                  },
+                  child: const Text('开始导出'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   // 开始导出数据
-  Future<void> _startExport() async {
+  Future<void> _startExport({bool includeFiles = true}) async {
     if (!mounted) return;
     
-    final snackBar = SnackBar(
-      content: Row(
-        children: [
-          const CircularProgressIndicator(strokeWidth: 2),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('正在导出数据...'),
-                LinearProgressIndicator(
-                  value: 0,
-                  backgroundColor: Colors.white30,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
+    // 显示初始进度
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('正在准备导出数据...'),
+        duration: Duration(seconds: 1),
       ),
-      duration: const Duration(hours: 1), // 长时间显示
-      backgroundColor: Colors.blue,
     );
     
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    
     try {
+      bool hadError = false;
+      String errorMsg = '';
+      
       final filePath = await _dataExportService.exportAllData(
+        includeFiles: includeFiles,
         progressCallback: (progress, message) {
-          // 更新进度（这里简化处理，实际应用中可能需要更复杂的进度更新机制）
+          // 检测错误信息
+          if (message.toLowerCase().contains('失败') || message.toLowerCase().contains('错误')) {
+            hadError = true;
+            errorMsg = message;
+            debugPrint('导出错误: $message');
+          }
+          
+          // 只在关键节点更新进度提示，避免频繁更新
+          if (mounted && (progress == 0.0 || progress == 0.25 || progress == 0.5 || progress == 0.75 || progress == 1.0)) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 1),
+                backgroundColor: hadError ? Colors.orange : null,
+              ),
+            );
+          }
+          
           debugPrint('导出进度: $progress - $message');
         },
       );
       
       if (!mounted) return;
       
-      // 关闭进度提示
+      // 显示成功消息
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       
-      // 显示成功消息
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('数据导出成功！文件保存在: $filePath'),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      if (hadError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('数据导出完成，但部分数据导出失败: $errorMsg'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.orange, // 使用橙色表示部分成功
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('数据导出成功！文件保存在: $filePath'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       
-      // 关闭进度提示
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      
       // 显示错误消息
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('数据导出失败: $e'),
@@ -224,61 +250,73 @@ class _SettingsPageState extends State<SettingsPage> {
       
       if (!mounted) return;
       
-      final snackBar = SnackBar(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(strokeWidth: 2),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('正在导入数据...'),
-                  LinearProgressIndicator(
-                    value: 0,
-                    backgroundColor: Colors.white30,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
+      // 显示初始进度
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('正在准备导入数据...'),
+          duration: Duration(seconds: 1),
         ),
-        duration: const Duration(hours: 1), // 长时间显示
-        backgroundColor: Colors.blue,
       );
       
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      bool hadError = false;
+      String errorMsg = '';
       
       await _dataExportService.importData(
         filePath: filePath,
         replaceExisting: replaceExisting,
         progressCallback: (progress, message, {isError = false}) {
-          // 更新进度（这里简化处理）
+          // 记录错误信息但继续导入
+          if (isError) {
+            hadError = true;
+            errorMsg = message;
+            debugPrint('导入错误: $message');
+          }
+          
+          // 只在关键节点更新进度提示，避免频繁更新
+          if (mounted && (progress == 0.0 || progress == 0.25 || progress == 0.5 || progress == 0.75 || progress == 1.0)) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 1),
+                backgroundColor: isError ? Colors.orange : null,
+              ),
+            );
+          }
+          
           debugPrint('导入进度: $progress - $message');
         },
       );
       
       if (!mounted) return;
       
-      // 关闭进度提示
+      // 确保先隐藏任何可能存在的通知
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       
-      // 显示成功消息
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('数据导入成功！'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      // 显示结果消息
+      if (hadError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('数据导入完成，但部分数据导入失败: $errorMsg'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.orange, // 使用橙色表示部分成功
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('数据导入成功！首页和综测页面已自动刷新'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
       
       // 重新加载用户名（以防用户数据发生变化）
       _loadUserName();
     } catch (e) {
       if (!mounted) return;
       
-      // 关闭进度提示
+      // 确保先隐藏任何可能存在的通知
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       
       // 显示错误消息

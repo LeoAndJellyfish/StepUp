@@ -18,6 +18,8 @@ import 'tag_dao.dart';
 import 'user_dao.dart';
 import 'file_attachment_dao.dart';
 import 'database_helper.dart';
+import 'event_bus.dart';
+import 'file_manager.dart';
 
 /// 数据导出进度回调
 typedef ExportProgressCallback = void Function(double progress, String message);
@@ -36,6 +38,8 @@ class DataExportService {
   final TagDao _tagDao = TagDao();
   final UserDao _userDao = UserDao();
   final FileAttachmentDao _fileAttachmentDao = FileAttachmentDao();
+  final EventBus _eventBus = EventBus();
+  final FileManager _fileManager = FileManager();
 
   /// 导出所有数据到JSON文件
   /// [outputPath] 导出文件路径（可选，默认为下载目录）
@@ -111,56 +115,129 @@ class DataExportService {
 
       // 4. 构建导出数据结构
       progressCallback?.call(0.7, '正在构建导出数据结构...');
-      final exportData = {
-        'metadata': {
-          'exportedAt': DateTime.now().toIso8601String(),
-          'version': '1.0',
-          'includeFiles': includeFiles,
-        },
-        'users': users.map((user) => user.toMap()).toList(),
-        'categories': categories.map((category) => category.toMap()).toList(),
-        'subcategories': subcategories.map((subcategory) => subcategory.toMap()).toList(),
-        'levels': levels.map((level) => level.toMap()).toList(),
-        'tags': tags.map((tag) => tag.toMap()).toList(),
-        'items': items.map((item) => item.toMap()).toList(),
-        'attachments': includeFiles
-            ? attachmentsMap.map((key, value) => MapEntry(key, value.map((a) => a.toMap()).toList()))
-            : <int, List<Map<String, dynamic>>>{},
-        'itemTags': itemTagsMap.map((key, value) => MapEntry(key, value.map((t) => t.id).toList())),
-      };
+      
+      try {
+        // 确保itemTagsMap的键是字符串而不是整数
+        final sanitizedItemTagsMap = itemTagsMap.map((key, value) => 
+          MapEntry(key.toString(), value.map((t) => t.id).toList())
+        );
+        
+        // 确保 attachmentsMap 的键是字符串而不是整数
+        // 并包含文件的实际内容
+        final sanitizedAttachmentsMap = <String, List<Map<String, dynamic>>>{};
+        final fileContentsMap = <String, String>{}; // 存储文件路径到Base64编码内容的映射
+        
+        if (includeFiles) {
+          int processedAttachments = 0;
+          int totalAttachments = 0;
+          
+          // 首先计算附件总数
+          for (final attachments in attachmentsMap.values) {
+            totalAttachments += attachments.length;
+          }
+          
+          for (final entry in attachmentsMap.entries) {
+            final itemId = entry.key;
+            final attachments = entry.value;
+            final attachmentMaps = <Map<String, dynamic>>[];
+            
+            for (final attachment in attachments) {
+              try {
+                // 获取原始附件数据
+                final attachmentMap = attachment.toMap();
+                
+                // 处理DateTime字段
+                attachmentMap.forEach((k, v) {
+                  if (v is DateTime) {
+                    attachmentMap[k] = v.toIso8601String();
+                  }
+                });
+                
+                // 读取文件内容并转为Base64
+                final file = File(attachment.filePath);
+                if (await file.exists()) {
+                  // 读取文件内容
+                  final bytes = await file.readAsBytes();
+                  final base64Content = base64Encode(bytes);
+                  
+                  // 在映射中记录文件内容
+                  final contentKey = '${attachment.id}_${path.basename(attachment.filePath)}';
+                  fileContentsMap[contentKey] = base64Content;
+                  
+                  // 在附件元数据中添加内容的引用键
+                  attachmentMap['content_key'] = contentKey;
+                }
+                
+                attachmentMaps.add(attachmentMap);
+                
+                // 更新进度
+                processedAttachments++;
+                final subProgress = 0.7 + (0.1 * processedAttachments / (totalAttachments > 0 ? totalAttachments : 1));
+                progressCallback?.call(subProgress, '正在处理附件文件...');
+                
+              } catch (e) {
+                debugPrint('处理附件文件失败: ${attachment.fileName}, 错误: $e');
+                // 继续处理其他附件
+              }
+            }
+            
+            sanitizedAttachmentsMap[itemId.toString()] = attachmentMaps;
+          }
+        }
+        
+        final exportData = {
+          'metadata': {
+            'exportedAt': DateTime.now().toIso8601String(),
+            'version': '1.1', // 更新版本号表示包含文件内容
+            'includeFiles': includeFiles,
+          },
+          'users': users.map((user) => user.toMap()).toList(),
+          'categories': categories.map((category) => category.toMap()).toList(),
+          'subcategories': subcategories.map((subcategory) => subcategory.toMap()).toList(),
+          'levels': levels.map((level) => level.toMap()).toList(),
+          'tags': tags.map((tag) => tag.toMap()).toList(),
+          'items': items.map((item) => item.toMap()).toList(),
+          'attachments': sanitizedAttachmentsMap,
+          'itemTags': sanitizedItemTagsMap,
+          'fileContents': fileContentsMap, // 添加文件内容映射
+        };
 
-      // 5. 创建JSON文件
-      progressCallback?.call(0.8, '正在创建JSON文件...');
-      final jsonString = JsonEncoder.withIndent('  ').convert(exportData);
+        // 5. 创建JSON文件
+        progressCallback?.call(0.8, '正在创建JSON文件...');
+        final jsonString = JsonEncoder.withIndent('  ').convert(exportData);
       
-      // 6. 确定输出路径
-      final timestamp = DateTime.now();
-      final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
-      final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}';
+        // 6. 确定输出路径
+        final timestamp = DateTime.now();
+        final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
+        final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}';
       
-      String userNamePart = '';
-      if (users.isNotEmpty && users.first.name.isNotEmpty) {
-        userNamePart = '${users.first.name}_';
+        String userNamePart = '';
+        if (users.isNotEmpty && users.first.name.isNotEmpty) {
+          userNamePart = '${users.first.name}_';
+        }
+      
+        final fileName = 'StepUp数据备份_$userNamePart${dateStr}_$timeStr.json';
+        String finalOutputPath;
+      
+        if (outputPath != null) {
+          finalOutputPath = path.join(outputPath, fileName);
+        } else {
+          // 默认保存到应用文档目录
+          final documentsDir = await getApplicationDocumentsDirectory();
+          finalOutputPath = path.join(documentsDir.path, fileName);
+        }
+
+        // 7. 写入文件
+        final outputFile = File(finalOutputPath);
+        await outputFile.writeAsString(jsonString, encoding: utf8);
+
+        progressCallback?.call(1.0, '导出完成');
+        return finalOutputPath;
+
+      } catch (e) {
+        debugPrint('构建导出数据结构失败: $e');
+        rethrow;
       }
-      
-      final fileName = 'StepUp数据备份_$userNamePart${dateStr}_$timeStr.json';
-      String finalOutputPath;
-      
-      if (outputPath != null) {
-        finalOutputPath = path.join(outputPath, fileName);
-      } else {
-        // 默认保存到应用文档目录
-        final documentsDir = await getApplicationDocumentsDirectory();
-        finalOutputPath = path.join(documentsDir.path, fileName);
-      }
-
-      // 7. 写入文件
-      final outputFile = File(finalOutputPath);
-      await outputFile.writeAsString(jsonString, encoding: utf8);
-
-      progressCallback?.call(1.0, '导出完成');
-      return finalOutputPath;
-
     } catch (e) {
       debugPrint('数据导出失败: $e');
       progressCallback?.call(0.0, '导出失败: ${e.toString()}');
@@ -217,11 +294,34 @@ class DataExportService {
               final user = User.fromMap(userData);
               // 如果是替换模式或用户不存在，则插入
               if (replaceExisting || !(await _userDao.hasUsers())) {
-                await _userDao.addUser(user);
+                // 处理ID冲突：先查询是否存在相同ID的用户
+                if (user.id != null) {
+                  final db = await _databaseHelper.database;
+                  final existingUser = await db.query(
+                    'users',
+                    where: 'id = ?',
+                    whereArgs: [user.id],
+                  );
+                  
+                  if (existingUser.isNotEmpty) {
+                    // 存在相同ID的用户，更新而不是插入
+                    await _userDao.updateUser(user);
+                    debugPrint('更新现有用户: ${user.name} (ID: ${user.id})');
+                  } else {
+                    // 不存在相同ID的用户，直接插入
+                    await _userDao.addUser(user);
+                    debugPrint('插入新用户: ${user.name} (ID: ${user.id})');
+                  }
+                } else {
+                  // 没有指定ID，直接插入
+                  await _userDao.addUser(user);
+                  debugPrint('插入新用户: ${user.name}');
+                }
               }
             } catch (e) {
               debugPrint('导入用户数据失败: $e');
-              // 继续导入其他用户数据
+              // 继续导入其他用户数据，但不要中断整个导入流程
+              progressCallback?.call(0.2, '导入用户数据失败: ${e.toString()}', isError: true);
             }
           }
         }
@@ -323,13 +423,36 @@ class DataExportService {
 
       // 10. 导入附件数据
       progressCallback?.call(0.7, '正在导入附件数据...', isError: false);
+      final Map<String, String> fileContentsMap = {};
+      
+      // 先提取文件内容映射
+      if (importData.containsKey('fileContents') && importData['fileContents'] is Map) {
+        final fileContents = importData['fileContents'] as Map;
+        fileContents.forEach((key, value) {
+          if (key is String && value is String) {
+            fileContentsMap[key] = value;
+          }
+        });
+      }
+      
       if (importData.containsKey('attachments') && importData['attachments'] is Map) {
         final attachmentsData = importData['attachments'] as Map;
         int processedAttachments = 0;
         final totalAttachments = attachmentsData.length;
+        
+        // 创建附件存储目录
+        final dataDir = await _fileManager.getAppDataPath();
+        final proofDir = Directory(path.join(dataDir, 'proof_materials'));
+        if (!await proofDir.exists()) {
+          await proofDir.create(recursive: true);
+        }
+        
         for (final entry in attachmentsData.entries) {
-          final oldItemId = entry.key;
+          final oldItemIdStr = entry.key.toString();
           final attachmentsList = entry.value as List;
+          
+          // 将字符串键转换回整数
+          final oldItemId = int.tryParse(oldItemIdStr) ?? 0;
           
           // 获取新ID
           final newItemId = itemIdMap[oldItemId] ?? oldItemId;
@@ -337,6 +460,51 @@ class DataExportService {
           for (final attachmentData in attachmentsList) {
             if (attachmentData is Map<String, dynamic>) {
               try {
+                // 确保日期时间字段正确转换
+                if (attachmentData['uploaded_at'] is String) {
+                  try {
+                    final dateTime = DateTime.parse(attachmentData['uploaded_at']);
+                    attachmentData['uploaded_at'] = dateTime.millisecondsSinceEpoch;
+                  } catch (e) {
+                    debugPrint('解析上传时间失败: ${attachmentData['uploaded_at']}');
+                    // 使用当前时间作为默认值
+                    attachmentData['uploaded_at'] = DateTime.now().millisecondsSinceEpoch;
+                  }
+                }
+                
+                // 获取内容键并恢复文件
+                final contentKey = attachmentData['content_key'] as String?;
+                String? restoredFilePath;
+                
+                if (contentKey != null && fileContentsMap.containsKey(contentKey)) {
+                  // 从 Base64 字符串恢复文件
+                  final base64Content = fileContentsMap[contentKey]!;
+                  final bytes = base64Decode(base64Content);
+                  
+                  // 使用原始文件名创建新文件
+                  final fileName = attachmentData['file_name'] as String? ?? 'unknown.dat';
+                  final fileExtension = path.extension(fileName);
+                  final uuid = DateTime.now().millisecondsSinceEpoch.toString();
+                  final newFileName = '$uuid$fileExtension';
+                  final newFilePath = path.join(proofDir.path, newFileName);
+                  
+                  // 写入文件
+                  final file = File(newFilePath);
+                  await file.writeAsBytes(bytes);
+                  
+                  // 更新文件路径
+                  restoredFilePath = newFilePath;
+                  debugPrint('恢复文件: $fileName -> $newFilePath');
+                }
+                
+                // 如果有新的文件路径，使用新路径
+                if (restoredFilePath != null) {
+                  attachmentData['file_path'] = restoredFilePath;
+                }
+                
+                // 移除content_key字段，不存储到数据库
+                attachmentData.remove('content_key');
+                
                 final attachment = FileAttachment.fromMap(attachmentData);
                 // 更新关联的条目ID
                 final updatedAttachment = attachment.copyWith(assessmentItemId: newItemId);
@@ -361,8 +529,11 @@ class DataExportService {
         int processedItems = 0;
         final totalItems = itemTagsData.length;
         for (final entry in itemTagsData.entries) {
-          final oldItemId = entry.key;
+          final oldItemIdStr = entry.key.toString();
           final tagIds = entry.value as List;
+          
+          // 将字符串键转换回整数
+          final oldItemId = int.tryParse(oldItemIdStr) ?? 0;
           
           // 获取新ID
           final newItemId = itemIdMap[oldItemId] ?? oldItemId;
@@ -383,6 +554,9 @@ class DataExportService {
       }
 
       progressCallback?.call(1.0, '导入完成', isError: false);
+      
+      // 触发数据变更事件，通知首页和综测页面刷新
+      _eventBus.emit(AppEvent.assessmentItemChanged);
     } catch (e) {
       debugPrint('数据导入失败: $e');
       progressCallback?.call(0.0, '导入失败: ${e.toString()}', isError: true);
