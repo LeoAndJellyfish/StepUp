@@ -657,7 +657,7 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
             tooltip: '预览',
           ),
           IconButton(
-            onPressed: () => _removeAttachment(attachment),
+            onPressed: () => _showRemoveAttachmentConfirmDialog(attachment),
             icon: const Icon(Icons.close, size: 16),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -809,6 +809,15 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         SnackBar(content: Text('已移除文件: ${attachment.fileName}')),
       );
     }
+  }
+
+  // 显示移除附件确认对话框
+  void _showRemoveAttachmentConfirmDialog(FileAttachment attachment) {
+    DeleteConfirmDialog.show(
+      context,
+      content: '确定要移除文件「${attachment.fileName}」吗？文件将被永久删除。',
+      onConfirm: () => _removeAttachment(attachment),
+    );
   }
 
   // 预览文件附件
@@ -1034,28 +1043,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除条目「${_currentItem?.title}」吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _deleteItem();
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+    DeleteConfirmDialog.show(
+      context,
+      content: '确定要删除条目「${_currentItem?.title}」吗？此操作不可撤销。',
+      onConfirm: _deleteItem,
     );
   }
 

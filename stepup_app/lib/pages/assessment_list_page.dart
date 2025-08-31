@@ -586,28 +586,10 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog(AssessmentItem item) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除条目「${item.title}」吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _deleteItem(item);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
+    DeleteConfirmDialog.show(
+      context,
+      content: '确定要删除条目「${item.title}」吗？此操作不可撤销。',
+      onConfirm: () => _deleteItem(item),
     );
   }
 
