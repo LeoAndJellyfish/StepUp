@@ -218,11 +218,15 @@ class DataExportService {
       
         final fileName = 'StepUp数据备份_$userNamePart${dateStr}_$timeStr.json';
         String finalOutputPath;
-      
+
         if (outputPath != null) {
-          finalOutputPath = path.join(outputPath, fileName);
+          final extension = path.extension(outputPath);
+          if (extension.isNotEmpty) {
+            finalOutputPath = outputPath;
+          } else {
+            finalOutputPath = path.join(outputPath, fileName);
+          }
         } else {
-          // 默认保存到应用文档目录
           final documentsDir = await getApplicationDocumentsDirectory();
           finalOutputPath = path.join(documentsDir.path, fileName);
         }
