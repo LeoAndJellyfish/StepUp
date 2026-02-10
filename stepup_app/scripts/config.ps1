@@ -6,8 +6,9 @@ $Global:ProjectConfig = @{
     Name = "StepUp综合测评系统"
     ProjectRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app"
     BuildRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\build"
-    ReleasesRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\build\releases"
-    ArchiveRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\build\archive"
+    # releases 目录独立于 build 目录，避免 flutter clean 清理
+    ReleasesRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\releases"
+    ArchiveRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\releases\archive"
     ScriptsRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\scripts"
 }
 

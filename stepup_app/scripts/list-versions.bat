@@ -1,7 +1,8 @@
 @echo off
 chcp 65001 >nul
 
-set RELEASES_ROOT=c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\build\releases
+REM releases 目录独立于 build 目录，避免 flutter clean 清理
+set RELEASES_ROOT=c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\releases
 
 echo ========================================
 echo StepUp综测系统 - 版本管理

@@ -9,7 +9,8 @@ param(
     [string]$Version = ""
 )
 
-$ReleasesRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\build\releases"
+# releases 目录独立于 build 目录，避免 flutter clean 清理
+$ReleasesRoot = "c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app\releases"
 
 function Write-ColorText {
     param([string]$Text, [string]$Color = "White")

@@ -14,7 +14,8 @@ if "%DESCRIPTION%"=="" set DESCRIPTION=正式版
 
 set PROJECT_ROOT=c:\Users\Lenovo\Documents\GitHub\StepUp\stepup_app
 set BUILD_ROOT=%PROJECT_ROOT%\build
-set RELEASES_ROOT=%BUILD_ROOT%\releases
+REM releases 目录独立于 build 目录，避免 flutter clean 清理
+set RELEASES_ROOT=%PROJECT_ROOT%\releases\windows
 set VERSION_DIR=%RELEASES_ROOT%\v%VERSION%
 
 echo ========================================
