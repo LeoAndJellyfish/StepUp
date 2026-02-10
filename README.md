@@ -112,7 +112,7 @@ https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=ms
 
 ## 📄 许可证
 
-本项目采用MIT许可证，详见LICENSE文件。
+本项目采用 Apache License 2.0 许可证，详见 LICENSE 文件。
 
 ## 📞 联系我们
 
