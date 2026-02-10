@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,13 +8,13 @@ class NutstoreConfigService {
   static const String _keyServerUrl = 'nutstore_server_url';
   static const String _keyUsername = 'nutstore_username';
   static const String _keyPassword = 'nutstore_password';
+  static const String _keyPasswordIv = 'nutstore_password_iv';
   static const String _keyEnabled = 'nutstore_enabled';
   static const String _keyLastBackupTime = 'nutstore_last_backup_time';
   static const String _keyAutoBackup = 'nutstore_auto_backup';
 
   // 加密密钥（用于加密存储密码）- 必须是32字节
   static final _encryptionKey = encrypt.Key.fromUtf8('StepUpNutstoreBackupKey32Bytes1!');
-  static final _iv = encrypt.IV.fromLength(16);
 
   late encrypt.Encrypter _encrypter;
   SharedPreferences? _prefs;
@@ -57,22 +58,42 @@ class NutstoreConfigService {
   }
 
   /// 保存密码（加密存储）
+  /// 使用随机 IV 并将 IV 与密文一起存储
   Future<void> setPassword(String password) async {
     final prefs = await _preferences;
-    final encrypted = _encrypter.encrypt(password, iv: _iv);
-    await prefs.setString(_keyPassword, encrypted.base64);
+    // 生成随机 IV
+    final iv = encrypt.IV.fromSecureRandom(16);
+    // 加密密码
+    final encrypted = _encrypter.encrypt(password, iv: iv);
+    // 将 IV 和密文一起存储（格式: IV.base64:密文.base64）
+    final combined = '${iv.base64}:${encrypted.base64}';
+    await prefs.setString(_keyPassword, combined);
   }
 
   /// 获取密码（解密）
+  /// 从存储中提取 IV 和密文进行解密
   Future<String?> getPassword() async {
     final prefs = await _preferences;
-    final encryptedBase64 = prefs.getString(_keyPassword);
-    if (encryptedBase64 == null || encryptedBase64.isEmpty) {
+    final combined = prefs.getString(_keyPassword);
+    if (combined == null || combined.isEmpty) {
       return null;
     }
     try {
+      // 分割 IV 和密文
+      final parts = combined.split(':');
+      if (parts.length != 2) {
+        // 兼容旧格式（没有 IV 的纯密文，使用固定 IV）
+        final encrypted = encrypt.Encrypted.fromBase64(combined);
+        final fixedIv = encrypt.IV.fromUtf8('StepUpNutstoreIV16');
+        return _encrypter.decrypt(encrypted, iv: fixedIv);
+      }
+      final ivBase64 = parts[0];
+      final encryptedBase64 = parts[1];
+      // 解码 IV 和密文
+      final iv = encrypt.IV.fromBase64(ivBase64);
       final encrypted = encrypt.Encrypted.fromBase64(encryptedBase64);
-      return _encrypter.decrypt(encrypted, iv: _iv);
+      // 解密
+      return _encrypter.decrypt(encrypted, iv: iv);
     } catch (e) {
       return null;
     }
@@ -132,6 +153,7 @@ class NutstoreConfigService {
     await prefs.remove(_keyServerUrl);
     await prefs.remove(_keyUsername);
     await prefs.remove(_keyPassword);
+    await prefs.remove(_keyPasswordIv);
     await prefs.remove(_keyEnabled);
     await prefs.remove(_keyLastBackupTime);
     await prefs.remove(_keyAutoBackup);
