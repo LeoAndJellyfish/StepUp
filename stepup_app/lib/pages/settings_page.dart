@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/user_dao.dart';
 import '../services/data_export_service.dart';
+import '../services/ai_config_service.dart';
 import 'package:file_picker/file_picker.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -14,11 +15,30 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String? _userName;
   final DataExportService _dataExportService = DataExportService();
-  
+  final AIConfigService _aiConfigService = AIConfigService();
+  bool _isAIEnabled = true;
+  bool _isAIConfigured = false;
+
   @override
   void initState() {
     super.initState();
     _loadUserName();
+    _loadAIConfig();
+  }
+
+  Future<void> _loadAIConfig() async {
+    try {
+      final isEnabled = await _aiConfigService.isEnabled();
+      final isConfigured = await _aiConfigService.isConfigured();
+      if (mounted) {
+        setState(() {
+          _isAIEnabled = isEnabled;
+          _isAIConfigured = isConfigured;
+        });
+      }
+    } catch (e) {
+      debugPrint('加载 AI 配置失败: $e');
+    }
   }
 
   Future<void> _loadUserName() async {
@@ -330,6 +350,139 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // 显示 AI 配置对话框
+  Future<void> _showAIConfigDialog() async {
+    final apiKey = await _aiConfigService.getApiKey() ?? '';
+    final baseUrl = await _aiConfigService.getBaseUrl();
+
+    final apiKeyController = TextEditingController(text: apiKey);
+    final baseUrlController = TextEditingController(text: baseUrl);
+
+    if (!mounted) return;
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('AI 服务配置'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '配置 DeepSeek AI 服务，用于智能识别条目分类。',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () {
+                    // 可以添加打开浏览器访问 DeepSeek 平台的功能
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('请访问 https://platform.deepseek.com 获取 API Key'),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    '获取 API Key →',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: apiKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'API Key *',
+                    hintText: '请输入 DeepSeek API Key',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.key),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: baseUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Base URL',
+                    hintText: 'https://api.deepseek.com',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '提示：一般情况下无需修改 Base URL',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (_isAIConfigured)
+              TextButton(
+                onPressed: () async {
+                  await _aiConfigService.clearApiKey();
+                  await _loadAIConfig();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('API Key 已清除')),
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('清除配置'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newApiKey = apiKeyController.text.trim();
+                final newBaseUrl = baseUrlController.text.trim();
+
+                if (newApiKey.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('请输入 API Key'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                await _aiConfigService.setApiKey(newApiKey);
+                if (newBaseUrl.isNotEmpty) {
+                  await _aiConfigService.setBaseUrl(newBaseUrl);
+                }
+                await _loadAIConfig();
+
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('AI 配置已保存')),
+                  );
+                }
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -393,6 +546,32 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('导入数据'),
             subtitle: const Text('从JSON文件导入数据'),
             onTap: _showImportDialog,
+          ),
+          // AI 设置部分
+          const Divider(),
+          ListTile(
+            leading: Icon(
+              Icons.auto_awesome,
+              color: _isAIConfigured ? Colors.green : Colors.grey,
+            ),
+            title: const Text('AI 智能识别'),
+            subtitle: Text(
+              _isAIConfigured
+                  ? '已配置 DeepSeek API'
+                  : '未配置 API Key，点击进行配置',
+            ),
+            trailing: Switch(
+              value: _isAIEnabled,
+              onChanged: _isAIConfigured
+                  ? (value) async {
+                      await _aiConfigService.setEnabled(value);
+                      setState(() {
+                        _isAIEnabled = value;
+                      });
+                    }
+                  : null,
+            ),
+            onTap: _showAIConfigDialog,
           ),
           const Divider(),
           ListTile(

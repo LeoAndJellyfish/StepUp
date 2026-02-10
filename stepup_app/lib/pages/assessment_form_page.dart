@@ -18,6 +18,8 @@ import '../services/file_attachment_dao.dart';
 import '../services/file_manager.dart';
 import '../services/assessment_deletion_service.dart';
 import '../services/event_bus.dart';
+import '../services/ai_classification_service.dart';
+import '../services/ai_config_service.dart';
 import '../widgets/common_widgets.dart';
 
 class AssessmentFormPage extends StatefulWidget {
@@ -71,6 +73,7 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isAIClassifying = false;
   AssessmentItem? _currentItem;
 
   bool get isEditing => widget.itemId != null;
@@ -213,8 +216,29 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                       ),
                       maxLines: 3,
                     ),
+                    const SizedBox(height: AppTheme.spacing8),
+
+                    // AI 智能分类按钮
+                    if (!isEditing)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _isAIClassifying ? null : _performAIClassification,
+                          icon: _isAIClassifying
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.auto_awesome),
+                          label: Text(_isAIClassifying ? 'AI识别中...' : 'AI智能识别'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: AppTheme.spacing16),
-                    
+
                     // 主分类
                     DropdownButtonFormField<int>(
                       initialValue: _selectedCategoryId,
@@ -682,6 +706,287 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         );
       }
     }
+  }
+
+  // AI 智能分类
+  Future<void> _performAIClassification() async {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+
+    if (title.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先输入活动名称')),
+        );
+      }
+      return;
+    }
+
+    // 检查是否已配置 API Key
+    final configService = AIConfigService();
+    final isConfigured = await configService.isConfigured();
+
+    if (!isConfigured) {
+      if (mounted) {
+        _showAIConfigDialog();
+      }
+      return;
+    }
+
+    setState(() {
+      _isAIClassifying = true;
+    });
+
+    try {
+      final aiService = AIClassificationService();
+
+      // 获取所有子分类
+      final allSubcategories = await _subcategoryDao.getAllSubcategories();
+
+      final result = await aiService.classifyItem(
+        title: title,
+        description: description,
+        categories: _categories,
+        subcategories: allSubcategories,
+        levels: _levels,
+      );
+
+      // 应用 AI 分类结果
+      await _applyAIClassificationResult(result);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI 识别失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAIClassifying = false;
+        });
+      }
+    }
+  }
+
+  // 显示 AI 配置对话框
+  void _showAIConfigDialog() {
+    final apiKeyController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('配置 AI 服务'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '使用 AI 智能识别功能需要配置 DeepSeek API Key。\n\n'
+              '您可以从 https://platform.deepseek.com 获取 API Key。',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: apiKeyController,
+              decoration: const InputDecoration(
+                labelText: 'DeepSeek API Key',
+                hintText: '请输入您的 API Key',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final apiKey = apiKeyController.text.trim();
+              if (apiKey.isNotEmpty) {
+                final configService = AIConfigService();
+                await configService.setApiKey(apiKey);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('API Key 已保存')),
+                  );
+                  // 重新尝试 AI 分类
+                  _performAIClassification();
+                }
+              }
+            },
+            child: const Text('保存并继续'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 应用 AI 分类结果
+  Future<void> _applyAIClassificationResult(AIClassificationResult result) async {
+    // 验证并应用分类
+    if (result.categoryId != null) {
+      final categoryExists = _categories.any((c) => c.id == result.categoryId);
+      if (categoryExists) {
+        _selectedCategoryId = result.categoryId;
+
+        // 加载子分类
+        await _loadSubcategories(result.categoryId!);
+
+        // 应用子分类
+        if (result.subcategoryId != null) {
+          final subcategoryExists = _subcategories.any((s) => s.id == result.subcategoryId);
+          if (subcategoryExists) {
+            _selectedSubcategoryId = result.subcategoryId;
+          }
+        }
+      }
+    }
+
+    // 应用等级
+    if (result.levelId != null) {
+      final levelExists = _levels.any((l) => l.id == result.levelId);
+      if (levelExists) {
+        _selectedLevelId = result.levelId;
+      }
+    }
+
+    // 应用时长
+    if (result.suggestedDuration != null && result.suggestedDuration! > 0) {
+      _durationController.text = result.suggestedDuration.toString();
+    }
+
+    // 应用获奖信息
+    if (result.isAwarded != null) {
+      _isAwarded = result.isAwarded!;
+      if (result.awardLevel != null && result.awardLevel!.isNotEmpty) {
+        _awardLevelController.text = result.awardLevel!;
+      }
+    }
+
+    // 应用集体/负责人信息
+    if (result.isCollective != null) {
+      _isCollective = result.isCollective!;
+    }
+    if (result.isLeader != null) {
+      _isLeader = result.isLeader!;
+    }
+
+    // 应用参与人数
+    if (result.participantCount != null && result.participantCount! > 0) {
+      _participantCountController.text = result.participantCount.toString();
+    }
+
+    setState(() {});
+
+    // 显示结果提示
+    if (mounted) {
+      _showAIClassificationResultDialog(result);
+    }
+  }
+
+  // 显示 AI 分类结果对话框
+  void _showAIClassificationResultDialog(AIClassificationResult result) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text('AI 智能识别结果'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '置信度: ${(result.confidence * 100).toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: result.confidence > 0.8
+                    ? Colors.green
+                    : result.confidence > 0.5
+                        ? Colors.orange
+                        : Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '识别理由:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(result.reasoning),
+            const SizedBox(height: 12),
+            const Text(
+              '已自动填充以下字段:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (_selectedCategoryId != null)
+                  Chip(
+                    label: Text(
+                      '分类: ${_categories.firstWhere((c) => c.id == _selectedCategoryId).name}',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (_selectedSubcategoryId != null)
+                  Chip(
+                    label: Text(
+                      '子分类: ${_subcategories.firstWhere((s) => s.id == _selectedSubcategoryId).name}',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (_selectedLevelId != null)
+                  Chip(
+                    label: Text(
+                      '级别: ${_levels.firstWhere((l) => l.id == _selectedLevelId).name}',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (result.suggestedDuration != null)
+                  Chip(
+                    label: Text('时长: ${result.suggestedDuration}小时'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (result.isAwarded == true)
+                  Chip(
+                    label: Text('获奖: ${_awardLevelController.text.isNotEmpty ? _awardLevelController.text : "是"}'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (result.isCollective == true)
+                  const Chip(
+                    label: Text('集体项目'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (result.isLeader == true)
+                  const Chip(
+                    label: Text('负责人'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   // 自动计算功能已删除，将来由AI处理

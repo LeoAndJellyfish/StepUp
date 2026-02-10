@@ -71,6 +71,12 @@ dependencies:
   # 文件压缩
   archive: ^3.4.9
 
+  # HTTP 请求
+  http: ^1.1.0
+
+  # 本地存储
+  shared_preferences: ^2.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
