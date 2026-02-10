@@ -13,18 +13,29 @@ class FileManager {
 
   final Uuid _uuid = const Uuid();
 
-  /// 获取应用数据目录（应用所在目录的data文件夹）
+  /// 获取应用数据目录
+  /// 桌面端：应用所在目录的data文件夹
+  /// 移动端：使用应用文档目录
   Future<Directory> get _appDataDirectory async {
-    // 获取应用可执行文件的目录
-    final executablePath = Platform.resolvedExecutable;
-    final executableDir = Directory(path.dirname(executablePath));
-    
-    // 在应用目录下创建data文件夹
-    final dataDir = Directory(path.join(executableDir.path, 'data'));
-    if (!await dataDir.exists()) {
-      await dataDir.create(recursive: true);
+    // 判断平台类型
+    if (Platform.isAndroid || Platform.isIOS) {
+      // 移动端：使用 path_provider 获取应用文档目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final dataDir = Directory(path.join(appDir.path, 'app_data'));
+      if (!await dataDir.exists()) {
+        await dataDir.create(recursive: true);
+      }
+      return dataDir;
+    } else {
+      // 桌面端：在应用可执行文件目录下创建data文件夹
+      final executablePath = Platform.resolvedExecutable;
+      final executableDir = Directory(path.dirname(executablePath));
+      final dataDir = Directory(path.join(executableDir.path, 'data'));
+      if (!await dataDir.exists()) {
+        await dataDir.create(recursive: true);
+      }
+      return dataDir;
     }
-    return dataDir;
   }
 
   /// 获取证明材料存储目录（在应用data文件夹下）
