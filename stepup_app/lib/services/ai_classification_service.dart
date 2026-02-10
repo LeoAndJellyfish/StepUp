@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -35,20 +36,55 @@ class AIClassificationResult {
   });
 
   factory AIClassificationResult.fromJson(Map<String, dynamic> json) {
+    final suggestedDuration = json['suggested_duration'];
+    double? parsedDuration;
+    if (suggestedDuration != null) {
+      try {
+        parsedDuration = suggestedDuration is num
+            ? suggestedDuration.toDouble()
+            : double.tryParse(suggestedDuration.toString());
+      } catch (e) {
+        parsedDuration = null;
+      }
+    }
+
+    final confidenceValue = json['confidence'];
+    double parsedConfidence = 0.0;
+    if (confidenceValue != null) {
+      try {
+        parsedConfidence = confidenceValue is num
+            ? confidenceValue.toDouble()
+            : double.tryParse(confidenceValue.toString()) ?? 0.0;
+        parsedConfidence = parsedConfidence.clamp(0.0, 1.0);
+      } catch (e) {
+        parsedConfidence = 0.0;
+      }
+    }
+
+    final participantCountValue = json['participant_count'];
+    int? parsedParticipantCount;
+    if (participantCountValue != null) {
+      try {
+        parsedParticipantCount = participantCountValue is int
+            ? participantCountValue
+            : int.tryParse(participantCountValue.toString());
+      } catch (e) {
+        parsedParticipantCount = null;
+      }
+    }
+
     return AIClassificationResult(
       categoryId: json['category_id'] as int?,
       subcategoryId: json['subcategory_id'] as int?,
       levelId: json['level_id'] as int?,
-      suggestedDuration: json['suggested_duration'] != null
-          ? (json['suggested_duration'] as num).toDouble()
-          : null,
+      suggestedDuration: parsedDuration,
       isAwarded: json['is_awarded'] as bool?,
       awardLevel: json['award_level'] as String?,
       isCollective: json['is_collective'] as bool?,
       isLeader: json['is_leader'] as bool?,
-      participantCount: json['participant_count'] as int?,
-      reasoning: json['reasoning'] ?? '',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      participantCount: parsedParticipantCount,
+      reasoning: json['reasoning'] as String? ?? '',
+      confidence: parsedConfidence,
     );
   }
 }
@@ -80,6 +116,16 @@ class AIClassificationService {
     required List<Subcategory> subcategories,
     required List<Level> levels,
   }) async {
+    if (categories.isEmpty) {
+      throw Exception('分类列表为空，无法进行智能分类');
+    }
+    if (levels.isEmpty) {
+      throw Exception('等级列表为空，无法进行智能分类');
+    }
+    if (title.trim().isEmpty) {
+      throw Exception('活动名称不能为空');
+    }
+
     final prompt = _buildClassificationPrompt(
       title: title,
       description: description,
@@ -178,38 +224,53 @@ ${const JsonEncoder.withIndent('  ').convert(levelsJson)}
 
     final url = Uri.parse('$configBaseUrl/v1/chat/completions');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $configApiKey',
-      },
-      body: jsonEncode({
-        'model': _model,
-        'messages': [
-          {'role': 'system', 'content': '你是一个专业的大学生综合测评分类助手，擅长根据活动描述自动识别分类。'},
-          {'role': 'user', 'content': prompt},
-        ],
-        'temperature': 0.3,
-        'max_tokens': 1000,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      throw HttpException(
-        'DeepSeek API 调用失败: ${response.statusCode} - ${response.body}',
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $configApiKey',
+        },
+        body: jsonEncode({
+          'model': _model,
+          'messages': [
+            {'role': 'system', 'content': '你是一个专业的大学生综合测评分类助手，擅长根据活动描述自动识别分类。'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.3,
+          'max_tokens': 1000,
+        }),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('DeepSeek API 请求超时，请检查网络连接或稍后重试');
+        },
       );
+
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'DeepSeek API 调用失败: ${response.statusCode} - ${response.body}',
+        );
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = data['choices'] as List<dynamic>;
+
+      if (choices.isEmpty) {
+        throw Exception('DeepSeek API 返回结果为空');
+      }
+
+      final message = choices[0]['message'] as Map<String, dynamic>;
+      return message['content'] as String;
+    } on SocketException catch (e) {
+      throw Exception('网络连接失败: $e');
+    } on TimeoutException catch (e) {
+      throw Exception('请求超时: $e');
+    } on FormatException catch (e) {
+      throw Exception('响应数据格式错误: $e');
+    } catch (e) {
+      throw Exception('调用 DeepSeek API 时发生错误: $e');
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final choices = data['choices'] as List<dynamic>;
-
-    if (choices.isEmpty) {
-      throw Exception('DeepSeek API 返回结果为空');
-    }
-
-    final message = choices[0]['message'] as Map<String, dynamic>;
-    return message['content'] as String;
   }
 
   /// 解析 AI 响应

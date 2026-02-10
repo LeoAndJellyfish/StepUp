@@ -937,21 +937,51 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                 if (_selectedCategoryId != null)
                   Chip(
                     label: Text(
-                      '分类: ${_categories.firstWhere((c) => c.id == _selectedCategoryId).name}',
+                      '分类: ${_categories.firstWhere(
+                        (c) => c.id == _selectedCategoryId,
+                        orElse: () => Category(
+                          id: _selectedCategoryId,
+                          name: '未知分类',
+                          code: '',
+                          description: '',
+                          color: '#999999',
+                          icon: 'category',
+                          createdAt: DateTime.now(),
+                        ),
+                      ).name}',
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
                 if (_selectedSubcategoryId != null)
                   Chip(
                     label: Text(
-                      '子分类: ${_subcategories.firstWhere((s) => s.id == _selectedSubcategoryId).name}',
+                      '子分类: ${_subcategories.firstWhere(
+                        (s) => s.id == _selectedSubcategoryId,
+                        orElse: () => Subcategory(
+                          id: _selectedSubcategoryId,
+                          categoryId: _selectedCategoryId ?? 0,
+                          name: '未知子分类',
+                          code: '',
+                          description: '',
+                          createdAt: DateTime.now(),
+                        ),
+                      ).name}',
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
                 if (_selectedLevelId != null)
                   Chip(
                     label: Text(
-                      '级别: ${_levels.firstWhere((l) => l.id == _selectedLevelId).name}',
+                      '级别: ${_levels.firstWhere(
+                        (l) => l.id == _selectedLevelId,
+                        orElse: () => Level(
+                          id: _selectedLevelId,
+                          name: '未知级别',
+                          code: '',
+                          description: '',
+                          createdAt: DateTime.now(),
+                        ),
+                      ).name}',
                     ),
                     visualDensity: VisualDensity.compact,
                   ),
