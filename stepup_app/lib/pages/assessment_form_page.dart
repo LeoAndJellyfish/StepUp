@@ -769,10 +769,12 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   }
 
   // 显示 AI 配置对话框
-  void _showAIConfigDialog() async {
+  Future<void> _showAIConfigDialog() async {
     final configService = AIConfigService();
-    final apiKey = await configService.getApiKey() ?? '';
-    final apiKeyController = TextEditingController(text: apiKey);
+    final savedApiKey = await configService.getApiKey() ?? '';
+    final apiKeyController = TextEditingController(text: savedApiKey);
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -807,7 +809,6 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
             onPressed: () async {
               final apiKey = apiKeyController.text.trim();
               if (apiKey.isNotEmpty) {
-                final configService = AIConfigService();
                 await configService.setApiKey(apiKey);
                 if (context.mounted) {
                   Navigator.of(context).pop();
