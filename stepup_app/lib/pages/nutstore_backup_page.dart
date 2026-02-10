@@ -54,6 +54,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
       final isConfigured = await _configService.isConfigured();
       final lastBackupTime = await _configService.getLastBackupTime();
       final username = await _configService.getUsername();
+      final password = await _configService.getPassword();
 
       if (mounted) {
         setState(() {
@@ -62,6 +63,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           _isConfigured = isConfigured;
           _lastBackupTime = lastBackupTime;
           _usernameController.text = username ?? '';
+          _passwordController.text = password ?? '';
           _isLoading = false;
         });
       }

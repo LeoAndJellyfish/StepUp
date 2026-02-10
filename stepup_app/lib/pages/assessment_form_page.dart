@@ -769,8 +769,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   }
 
   // 显示 AI 配置对话框
-  void _showAIConfigDialog() {
-    final apiKeyController = TextEditingController();
+  void _showAIConfigDialog() async {
+    final configService = AIConfigService();
+    final apiKey = await configService.getApiKey() ?? '';
+    final apiKeyController = TextEditingController(text: apiKey);
 
     showDialog(
       context: context,
