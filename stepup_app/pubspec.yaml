@@ -77,6 +77,12 @@ dependencies:
   # 本地存储
   shared_preferences: ^2.2.2
 
+  # WebDAV 客户端（用于坚果云备份）
+  webdav_client: ^1.2.1
+
+  # 加密（用于存储密码）
+  encrypt: ^5.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

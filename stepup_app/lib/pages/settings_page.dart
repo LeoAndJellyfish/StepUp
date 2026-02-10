@@ -547,6 +547,15 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: const Text('从JSON文件导入数据'),
             onTap: _showImportDialog,
           ),
+          // 坚果云备份部分
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.cloud),
+            title: const Text('坚果云备份'),
+            subtitle: const Text('配置云备份，数据更安全'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => context.push('/settings/nutstore-backup'),
+          ),
           // AI 设置部分
           const Divider(),
           ListTile(

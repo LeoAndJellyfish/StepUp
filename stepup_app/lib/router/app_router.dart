@@ -12,6 +12,7 @@ import '../pages/category_detail_page.dart';
 import '../pages/user_onboarding_page.dart';
 import '../pages/first_time_welcome_page.dart';
 import '../pages/user_profile_edit_page.dart';
+import '../pages/nutstore_backup_page.dart';
 import '../models/category.dart';
 
 class AppRouter {
@@ -137,6 +138,14 @@ class AppRouter {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsPage(),
+        routes: [
+          // 坚果云备份页面
+          GoRoute(
+            path: 'nutstore-backup',
+            name: 'nutstore-backup',
+            builder: (context, state) => const NutstoreBackupPage(),
+          ),
+        ],
       ),
       // 图片预览页面
       GoRoute(
