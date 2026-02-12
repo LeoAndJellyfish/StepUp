@@ -163,7 +163,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: AppTheme.spacing8),
             Text(
-              '今天也要继续努力提升自己哦！',
+              '每一步努力，都是成长的足迹！',
               style: AppTheme.bodyMedium.copyWith(
                 color: Theme.of(context).colorScheme.outline,
               ),

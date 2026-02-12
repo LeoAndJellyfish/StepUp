@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 import '../services/user_dao.dart';
 import '../services/data_export_service.dart';
 import '../services/ai_config_service.dart';
+import '../providers/theme_provider.dart';
+import '../theme/app_theme.dart';
 import 'package:file_picker/file_picker.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -14,6 +18,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String? _userName;
+  String _version = '';
   final DataExportService _dataExportService = DataExportService();
   final AIConfigService _aiConfigService = AIConfigService();
   bool _isAIEnabled = true;
@@ -24,6 +29,16 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadUserName();
     _loadAIConfig();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _version = packageInfo.version;
+      });
+    }
   }
 
   Future<void> _loadAIConfig() async {
@@ -53,6 +68,58 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('加载用户名失败: $e');
     }
+  }
+
+  void _showThemeModeDialog(ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('外观设置'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: AppThemeMode.values.map((mode) {
+              final isSelected = themeProvider.themeMode == mode;
+              return InkWell(
+                onTap: () {
+                  themeProvider.setThemeMode(mode);
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.1) : null,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        themeProvider.getThemeModeIcon(mode),
+                        color: isSelected ? AppTheme.primaryColor : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        themeProvider.getThemeModeName(mode),
+                        style: TextStyle(
+                          color: isSelected ? AppTheme.primaryColor : null,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (isSelected)
+                        Icon(
+                          Icons.check,
+                          color: AppTheme.primaryColor,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 
   // 显示导出数据对话框
@@ -523,10 +590,23 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-          const ListTile(
-            leading: Icon(Icons.info),
-            title: Text('关于应用'),
-            subtitle: Text('StepUp 综合测评系统 v1.0.0'),
+          // 主题设置
+          const Divider(),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return ListTile(
+                leading: Icon(themeProvider.getThemeModeIcon(themeProvider.themeMode)),
+                title: const Text('外观设置'),
+                subtitle: Text(themeProvider.getThemeModeName(themeProvider.themeMode)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () => _showThemeModeDialog(themeProvider),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('关于应用'),
+            subtitle: Text('StepUp 综合测评系统 v$_version'),
           ),
           // 数据备份与恢复部分
           const Divider(),

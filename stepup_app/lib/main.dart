@@ -8,6 +8,7 @@ import 'theme/app_theme.dart';
 import 'services/database_helper.dart';
 import 'services/file_manager.dart';
 import 'services/user_dao.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   // 确保Flutter绑定初始化
@@ -55,7 +56,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // 这里可以添加更多的Provider
         Provider<DatabaseHelper>(
           create: (context) => DatabaseHelper(),
           dispose: (context, db) => db.close(),
@@ -63,22 +63,29 @@ class MyApp extends StatelessWidget {
         Provider<UserDao>(
           create: (context) => UserDao(),
         ),
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (context) => ThemeProvider(),
+        ),
       ],
-      child: MaterialApp.router(
-        title: 'StepUp 综合测评系统',
-        theme: AppTheme.lightTheme.copyWith(
-          textTheme: AppTheme.lightTheme.textTheme.apply(
-            fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
-          ),
-        ),
-        darkTheme: AppTheme.darkTheme.copyWith(
-          textTheme: AppTheme.darkTheme.textTheme.apply(
-            fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
-          ),
-        ),
-        themeMode: ThemeMode.system,
-        routerConfig: AppRouter.router,
-        debugShowCheckedModeBanner: false,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp.router(
+            title: 'StepUp 综合测评系统',
+            theme: AppTheme.lightTheme.copyWith(
+              textTheme: AppTheme.lightTheme.textTheme.apply(
+                fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
+              ),
+            ),
+            darkTheme: AppTheme.darkTheme.copyWith(
+              textTheme: AppTheme.darkTheme.textTheme.apply(
+                fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
+              ),
+            ),
+            themeMode: themeProvider.materialThemeMode,
+            routerConfig: AppRouter.router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

@@ -189,7 +189,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}',
                     '小时',
                     Icons.access_time,
-                    theme.colorScheme.secondary,
+                    AppTheme.accentOrange,
                   ),
                 ),
               ],
