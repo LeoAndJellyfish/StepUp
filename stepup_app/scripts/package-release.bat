@@ -86,7 +86,8 @@ echo }
 
 echo 创建压缩包...
 cd /d "%VERSION_DIR%"
-powershell -Command "Compress-Archive -Path '%PACKAGE_NAME%' -DestinationPath '%PACKAGE_NAME%.zip' -Force"
+:: 使用 PowerShell 变量来避免引号问题
+powershell -Command "$name='%PACKAGE_NAME%'; Compress-Archive -Path $name -DestinationPath \"$name.zip\" -Force"
 
 echo v%VERSION% > "%RELEASES_ROOT%\latest.txt"
 

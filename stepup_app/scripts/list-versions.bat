@@ -23,13 +23,13 @@ echo.
 
 for /d %%i in ("%RELEASES_ROOT%\v*") do (
     set "VERSION_NAME=%%~ni"
-    echo 📦 !VERSION_NAME!
+    echo ? !VERSION_NAME!
     
     if exist "%%i\*.zip" (
         for %%j in ("%%i\*.zip") do (
             set "SIZE=%%~zj"
             set /a "SIZE_MB=!SIZE!/1024/1024"
-            echo    📁 %%~nj (约 !SIZE_MB! MB)
+            echo    ? %%~nj (约 !SIZE_MB! MB)
         )
     )
     
@@ -38,7 +38,7 @@ for /d %%i in ("%RELEASES_ROOT%\v*") do (
             set "DESC=%%k"
             set "DESC=!DESC: "=!"
             set "DESC=!DESC:",=!"
-            echo    📋 类型：!DESC!
+            echo    ? 类型：!DESC!
         )
     )
     echo.
@@ -46,18 +46,18 @@ for /d %%i in ("%RELEASES_ROOT%\v*") do (
 
 if exist "%RELEASES_ROOT%\latest.txt" (
     set /p LATEST=<"%RELEASES_ROOT%\latest.txt"
-    echo 🔥 最新版本：!LATEST!
+    echo ? 最新版本：!LATEST!
 ) else (
-    echo ⚠️  未设置最新版本
+    echo ??  未设置最新版本
 )
 
 echo.
 echo 当前版本管理架构：
-echo 📂 build/releases/
-echo    📂 v1.0.0/
-echo    📂 v1.0.1/
-echo    📂 v1.0.2/
-echo    📄 latest.txt
+echo ? build/releases/
+echo    ? v1.0.0/
+echo    ? v1.0.1/
+echo    ? v1.0.2/
+echo    ? latest.txt
 echo.
 
 echo 使用说明：
