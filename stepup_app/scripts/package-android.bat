@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+setlocal
 
 if "%1"=="" (
     echo 使用方法: package-android.bat [版本号] [描述]
