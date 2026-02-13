@@ -10,7 +10,7 @@ if "%1"=="" (
 
 set VERSION=%1
 set DESCRIPTION=%~2
-if "%DESCRIPTION%"=="" set DESCRIPTION=正式版
+if "%DESCRIPTION%"=="" set DESCRIPTION=android
 
 :: 设置项目路径（基于脚本所在位置）
 set SCRIPT_DIR=%~dp0
@@ -53,9 +53,10 @@ set PACKAGE_DIR=%VERSION_DIR%\%PACKAGE_NAME%
 echo 创建发行包...
 mkdir "%PACKAGE_DIR%"
 
-REM 复制 APK 文件
-copy "%APK_SOURCE%" "%PACKAGE_DIR%\app-release.apk" >nul
-echo   ✓ 复制 APK 文件
+REM 复制 APK 文件（使用新命名格式）
+set APK_NAME=StepUp_v%VERSION%_%DESCRIPTION%.apk
+copy "%APK_SOURCE%" "%PACKAGE_DIR%\%APK_NAME%" >nul
+echo   ✓ 复制 APK 文件: %APK_NAME%
 
 echo 创建README文件...
 echo StepUp综测系统 Android版 v%VERSION% %DESCRIPTION% > "%PACKAGE_DIR%\README.txt"
@@ -66,14 +67,14 @@ echo - 版本号：v%VERSION% >> "%PACKAGE_DIR%\README.txt"
 echo - 版本类型：%DESCRIPTION% >> "%PACKAGE_DIR%\README.txt"
 echo - 构建时间：%date% %time% >> "%PACKAGE_DIR%\README.txt"
 echo - 目标平台：Android 5.0+ ^(API 21+^) >> "%PACKAGE_DIR%\README.txt"
-echo - 安装包：app-release.apk >> "%PACKAGE_DIR%\README.txt"
+echo - 安装包：%APK_NAME% >> "%PACKAGE_DIR%\README.txt"
 echo. >> "%PACKAGE_DIR%\README.txt"
 echo 安装说明： >> "%PACKAGE_DIR%\README.txt"
 echo 1. 在 Android 设备上启用"允许安装未知来源应用" >> "%PACKAGE_DIR%\README.txt"
 echo    - 设置 ^> 安全 ^> 允许安装未知来源应用 >> "%PACKAGE_DIR%\README.txt"
 echo    - 或设置 ^> 应用 ^> 特殊应用权限 ^> 安装未知应用 >> "%PACKAGE_DIR%\README.txt"
 echo. >> "%PACKAGE_DIR%\README.txt"
-echo 2. 将 app-release.apk 传输到 Android 设备 >> "%PACKAGE_DIR%\README.txt"
+echo 2. 将 %APK_NAME% 传输到 Android 设备 >> "%PACKAGE_DIR%\README.txt"
 echo    - 通过 USB 连接电脑传输 >> "%PACKAGE_DIR%\README.txt"
 echo    - 或通过邮件/微信/QQ 发送到手机 >> "%PACKAGE_DIR%\README.txt"
 echo    - 或通过网络传输工具 >> "%PACKAGE_DIR%\README.txt"
@@ -118,7 +119,7 @@ echo   "platform": "Android", >> "%PACKAGE_DIR%\version.json"
 echo   "buildId": "%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%", >> "%PACKAGE_DIR%\version.json"
 echo   "minSdkVersion": "21", >> "%PACKAGE_DIR%\version.json"
 echo   "targetSdkVersion": "34", >> "%PACKAGE_DIR%\version.json"
-echo   "apkFile": "app-release.apk" >> "%PACKAGE_DIR%\version.json"
+echo   "apkFile": "%APK_NAME%" >> "%PACKAGE_DIR%\version.json"
 echo } >> "%PACKAGE_DIR%\version.json"
 echo   ✓ 创建 version.json
 
@@ -138,5 +139,5 @@ echo ========================================
 echo 版本：v%VERSION% (%DESCRIPTION%)
 echo 发行包路径：%PACKAGE_DIR%
 echo 压缩包路径：%VERSION_DIR%\%PACKAGE_NAME%.zip
-echo APK 文件：%PACKAGE_DIR%\app-release.apk
+echo APK 文件：%PACKAGE_DIR%\%APK_NAME%
 echo.

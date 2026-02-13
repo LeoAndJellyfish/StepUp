@@ -34,18 +34,26 @@ echo.
 echo 从 pubspec.yaml 读取到版本号: v%VERSION%
 echo.
 
-:: 获取版本描述
+:: 获取版本描述（可选，如果不提供则各平台使用自己的默认描述）
 set DESCRIPTION=%1
-if "%DESCRIPTION%"=="" set DESCRIPTION=正式版
-
-echo 版本描述: %DESCRIPTION%
+if "%DESCRIPTION%"=="" (
+    echo 版本描述: 使用各平台默认描述 (win / android)
+    set USE_PLATFORM_DEFAULT=true
+) else (
+    echo 版本描述: %DESCRIPTION%
+    set USE_PLATFORM_DEFAULT=false
+)
 echo.
 
 :: 询问是否清理构建缓存
 set /p CLEAN_BUILD="是否清理构建缓存 (flutter clean)? (y/N): "
 
 :: 询问用户是否确认
-set /p CONFIRM="确认使用版本 v%VERSION% (%DESCRIPTION%) 进行构建打包? (Y/n): "
+if "%USE_PLATFORM_DEFAULT%"=="true" (
+    set /p CONFIRM="确认使用版本 v%VERSION% (win / android) 进行构建打包? (Y/n): "
+) else (
+    set /p CONFIRM="确认使用版本 v%VERSION% (%DESCRIPTION%) 进行构建打包? (Y/n): "
+)
 if /i "%CONFIRM%"=="n" (
     echo 已取消打包
     pause
@@ -95,7 +103,11 @@ echo Windows 构建完成，开始打包...
 echo ========================================
 echo.
 
-call "%PROJECT_ROOT%\scripts\package-release.bat" %VERSION% "%DESCRIPTION%"
+if "%USE_PLATFORM_DEFAULT%"=="true" (
+    call "%PROJECT_ROOT%\scripts\package-release.bat" %VERSION%
+) else (
+    call "%PROJECT_ROOT%\scripts\package-release.bat" %VERSION% "%DESCRIPTION%"
+)
 if errorlevel 1 (
     echo [错误] Windows 版本打包失败
     pause
@@ -121,7 +133,11 @@ echo Android 构建完成，开始打包...
 echo ========================================
 echo.
 
-call "%PROJECT_ROOT%\scripts\package-android.bat" %VERSION% "%DESCRIPTION%"
+if "%USE_PLATFORM_DEFAULT%"=="true" (
+    call "%PROJECT_ROOT%\scripts\package-android.bat" %VERSION%
+) else (
+    call "%PROJECT_ROOT%\scripts\package-android.bat" %VERSION% "%DESCRIPTION%"
+)
 if errorlevel 1 (
     echo [错误] Android 版本打包失败
     pause

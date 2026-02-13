@@ -10,7 +10,7 @@ if "%1"=="" (
 
 set VERSION=%1
 set DESCRIPTION=%~2
-if "%DESCRIPTION%"=="" set DESCRIPTION=正式版
+if "%DESCRIPTION%"=="" set DESCRIPTION=win
 
 :: 设置项目路径（基于脚本所在位置）
 set SCRIPT_DIR=%~dp0
