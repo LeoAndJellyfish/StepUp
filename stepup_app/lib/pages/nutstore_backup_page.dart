@@ -73,7 +73,10 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载配置失败: $e')),
+          SnackBar(
+            content: Text('加载配置失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -101,7 +104,10 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('配置已保存')),
+          const SnackBar(
+            content: Text('配置已保存'),
+            duration: Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
@@ -110,7 +116,10 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存配置失败: $e')),
+          SnackBar(
+            content: Text('保存配置失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -128,6 +137,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           SnackBar(
             content: Text(connected ? '连接成功！' : '连接失败，请检查账号密码'),
             backgroundColor: connected ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -137,6 +147,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
           SnackBar(
             content: Text('连接失败: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -180,6 +191,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
         SnackBar(
           content: Text(success ? '备份成功！' : '备份失败'),
           backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -239,6 +251,7 @@ class _NutstoreBackupPageState extends State<NutstoreBackupPage> {
         SnackBar(
           content: Text(success ? '恢复成功！' : '恢复失败'),
           backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 2),
         ),
       );
     }

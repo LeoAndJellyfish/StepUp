@@ -156,13 +156,13 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
             const SnackBar(
               content: Text('图片文件不存在，无法打开'),
               backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
             ),
           );
         }
         return;
       }
 
-      // 使用 file:// URL 方案打开文件
       final uri = Uri.file(widget.imagePath);
       
       if (await canLaunchUrl(uri)) {
@@ -181,6 +181,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
             SnackBar(
               content: Text('已使用外部应用打开: $fileName'),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -193,6 +194,7 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
           SnackBar(
             content: Text('打开失败: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
       }

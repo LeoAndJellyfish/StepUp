@@ -188,11 +188,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _startExport({bool includeFiles = true}) async {
     if (!mounted) return;
     
-    // 显示初始进度
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('正在准备导出数据...'),
-        duration: Duration(seconds: 1),
+        duration: Duration(milliseconds: 800),
       ),
     );
     
@@ -216,7 +215,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
-                duration: const Duration(seconds: 1),
+                duration: const Duration(milliseconds: 800),
                 backgroundColor: hadError ? Colors.orange : null,
               ),
             );
@@ -235,15 +234,15 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('数据导出完成，但部分数据导出失败: $errorMsg'),
-            duration: const Duration(seconds: 5),
-            backgroundColor: Colors.orange, // 使用橙色表示部分成功
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('数据导出成功！文件保存在: $filePath'),
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -255,8 +254,8 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('数据导出失败: $e'),
-          duration: const Duration(seconds: 5),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -329,6 +328,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SnackBar(
               content: Text('无法获取文件路径'),
               backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
             ),
           );
         }
@@ -337,11 +337,10 @@ class _SettingsPageState extends State<SettingsPage> {
       
       if (!mounted) return;
       
-      // 显示初始进度
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('正在准备导入数据...'),
-          duration: Duration(seconds: 1),
+          duration: Duration(milliseconds: 800),
         ),
       );
       
@@ -365,7 +364,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
-                duration: const Duration(seconds: 1),
+                duration: const Duration(milliseconds: 800),
                 backgroundColor: isError ? Colors.orange : null,
               ),
             );
@@ -385,15 +384,15 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('数据导入完成，但部分数据导入失败: $errorMsg'),
-            duration: const Duration(seconds: 5),
-            backgroundColor: Colors.orange, // 使用橙色表示部分成功
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('数据导入成功！首页和综测页面已自动刷新'),
-            duration: Duration(seconds: 3),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -410,8 +409,8 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('数据导入失败: $e'),
-          duration: const Duration(seconds: 5),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -454,6 +453,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('请访问 https://platform.deepseek.com 获取 API Key'),
+                        duration: Duration(seconds: 2),
                       ),
                     );
                   },
@@ -503,7 +503,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (context.mounted) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('API Key 已清除')),
+                      const SnackBar(
+                        content: Text('API Key 已清除'),
+                        duration: Duration(seconds: 2),
+                      ),
                     );
                   }
                 },
@@ -524,6 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SnackBar(
                       content: Text('请输入 API Key'),
                       backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
                     ),
                   );
                   return;
@@ -538,7 +542,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('AI 配置已保存')),
+                    const SnackBar(
+                      content: Text('AI 配置已保存'),
+                      duration: Duration(seconds: 2),
+                    ),
                   );
                 }
               },
@@ -669,7 +676,10 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('功能开发中')),
+                const SnackBar(
+                  content: Text('功能开发中'),
+                  duration: Duration(seconds: 2),
+                ),
               );
             },
           ),
@@ -679,7 +689,10 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('功能开发中')),
+                const SnackBar(
+                  content: Text('功能开发中'),
+                  duration: Duration(seconds: 2),
+                ),
               );
             },
           ),

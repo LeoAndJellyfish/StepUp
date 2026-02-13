@@ -13,6 +13,7 @@ import '../services/level_dao.dart';
 import '../services/assessment_deletion_service.dart';
 import '../services/proof_materials_export_service.dart';
 import '../services/event_bus.dart';
+import 'dart:math' as math;
 
 class AssessmentListPage extends StatefulWidget {
   const AssessmentListPage({super.key});
@@ -21,50 +22,61 @@ class AssessmentListPage extends StatefulWidget {
   State<AssessmentListPage> createState() => _AssessmentListPageState();
 }
 
-class _AssessmentListPageState extends State<AssessmentListPage> {
+class _AssessmentListPageState extends State<AssessmentListPage>
+    with TickerProviderStateMixin {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
   final CategoryDao _categoryDao = CategoryDao();
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
   final LevelDao _levelDao = LevelDao();
-  final AssessmentItemDeletionService _deletionService = AssessmentItemDeletionService();
-  final ProofMaterialsExportService _exportService = ProofMaterialsExportService();
+  final AssessmentItemDeletionService _deletionService =
+      AssessmentItemDeletionService();
+  final ProofMaterialsExportService _exportService =
+      ProofMaterialsExportService();
   final EventBus _eventBus = EventBus();
-  
+
   List<AssessmentItem> _items = [];
   List<Category> _categories = [];
   List<Subcategory> _subcategories = [];
   List<Level> _levels = [];
-  
+
   bool _isLoading = true;
   String? _error;
-  
-  // 导出状态
+
   bool _isExporting = false;
   double _exportProgress = 0.0;
   String _exportMessage = '';
-  
-  // 筛选条件
+
   int? _selectedCategoryId;
   int? _selectedSubcategoryId;
   int? _selectedLevelId;
-  bool? _isAwarded; // null表示全部，true表示已获奖，false表示未获奖
+  bool? _isAwarded;
   bool? _isCollective;
   bool? _isLeader;
   DateTime? _startDate;
   DateTime? _endDate;
 
+  late AnimationController _listAnimationController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _listAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _listAnimationController,
+      curve: Curves.easeOutCubic,
+    );
     _loadData();
-    // 监听评估条目变更事件，自动刷新数据
     _eventBus.on(AppEvent.assessmentItemChanged, _loadData);
   }
 
   @override
   void dispose() {
-    // 移除事件监听
     _eventBus.off(AppEvent.assessmentItemChanged, _loadData);
+    _listAnimationController.dispose();
     super.dispose();
   }
 
@@ -75,21 +87,19 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         _error = null;
       });
 
-      // 加载基础数据
       final categories = await _categoryDao.getAllCategories();
       final levels = await _levelDao.getAllLevels();
-      
-      // 加载子分类
+
       List<Subcategory> subcategories = [];
       if (_selectedCategoryId != null) {
-        subcategories = await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
+        subcategories =
+            await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
       } else {
         subcategories = await _subcategoryDao.getAllSubcategories();
       }
 
-      // 构建筛选条件
       final items = await _getFilteredItems();
-      
+
       setState(() {
         _items = items;
         _categories = categories;
@@ -97,6 +107,8 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         _levels = levels;
         _isLoading = false;
       });
+
+      _listAnimationController.forward(from: 0);
     } catch (e) {
       setState(() {
         _error = '加载数据失败: $e';
@@ -105,7 +117,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     }
   }
 
-  // 根据筛选条件获取数据
   Future<List<AssessmentItem>> _getFilteredItems() async {
     return await _assessmentItemDao.getAllItems(
       categoryId: _selectedCategoryId,
@@ -125,17 +136,17 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
       appBar: AppBar(
         title: const Text('综测条目'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
+          _AnimatedAppBarIcon(
+            icon: Icons.download,
             onPressed: _showExportDialog,
             tooltip: '导出证明材料',
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
+          _AnimatedAppBarIcon(
+            icon: Icons.filter_list,
             onPressed: _showFilterDialog,
           ),
-          IconButton(
-            icon: const Icon(Icons.search),
+          _AnimatedAppBarIcon(
+            icon: Icons.search,
             onPressed: _showSearchDialog,
           ),
         ],
@@ -144,7 +155,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         onRefresh: _loadData,
         child: _buildBody(),
       ),
-      floatingActionButton: CustomFAB(
+      floatingActionButton: _AnimatedFAB(
         onPressed: () async {
           final result = await context.push('/assessment/add');
           if (result == true) {
@@ -175,203 +186,168 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
         icon: Icons.assignment,
         title: '暂无条目',
         subtitle: '开始添加您的第一个综测条目吧！',
-        action: FilledButton.icon(
+        action: _MemphisAnimatedButton(
           onPressed: () async {
             final result = await context.push('/assessment/add');
             if (result == true) {
               _loadData();
             }
           },
-          icon: const Icon(Icons.add),
-          label: const Text('添加条目'),
+          icon: Icons.add,
+          label: '添加条目',
+          backgroundColor: AppTheme.memphisPink,
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppTheme.spacing8),
-      itemCount: _items.length,
-      itemBuilder: (context, index) {
-        final item = _items[index];
-        final category = _categories.firstWhere(
-          (cat) => cat.id == item.categoryId,
-          orElse: () => Category(
-            name: '未知分类',
-            code: 'UNKNOWN',
-            description: '',
-            color: '#999999',
-            icon: 'help',
-            createdAt: DateTime.now(),
-          ),
-        );
-        
-        return _buildItemCard(item, category);
-      },
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppTheme.spacing8),
+        itemCount: _items.length,
+        itemBuilder: (context, index) {
+          final item = _items[index];
+          final category = _categories.firstWhere(
+            (cat) => cat.id == item.categoryId,
+            orElse: () => Category(
+              name: '未知分类',
+              code: 'UNKNOWN',
+              description: '',
+              color: '#999999',
+              icon: 'help',
+              createdAt: DateTime.now(),
+            ),
+          );
+
+          return _AnimatedListItem(
+            index: index,
+            child: _buildItemCard(item, category),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildItemCard(AssessmentItem item, Category category) {
     final theme = Theme.of(context);
-    
-    return Card(
-      child: InkWell(
-        onTap: () async {
-          final result = await context.push('/assessment/edit/${item.id}');
-          if (result == true) {
-            _loadData();
-          }
-        },
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Color(
-                      int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
-                    ).withValues(alpha: 0.2),
-                    child: Icon(
-                      Icons.category,
-                      size: 16,
-                      color: Color(
-                        int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
+    final categoryColor = Color(
+      int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
+    );
+
+    return _AnimatedCard(
+      shadowColor: categoryColor,
+      onTap: () async {
+        final result = await context.push('/assessment/edit/${item.id}');
+        if (result == true) {
+          _loadData();
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: categoryColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: categoryColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.category,
+                    size: 18,
+                    color: categoryColor,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing12),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: AppTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _AnimatedPopupMenuButton(
+                  onDeleted: () => _showDeleteConfirmDialog(item),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing8),
+            Text(
+              category.name,
+              style: AppTheme.labelMedium.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: AppTheme.spacing8),
+              Text(
+                item.description,
+                style: AppTheme.bodyMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: AppTheme.spacing12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.memphisBlue.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.memphisBlue.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppTheme.memphisBlue,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: AppTheme.spacing8),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: AppTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'delete') {
-                        _showDeleteConfirmDialog(item);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('删除'),
-                          ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${item.duration.toStringAsFixed(1)} 小时',
+                        style: AppTheme.bodySmall.copyWith(
+                          color: AppTheme.memphisBlue,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spacing8),
-              Text(
-                category.name,
-                style: AppTheme.labelMedium.copyWith(
-                  color: theme.colorScheme.outline,
                 ),
-              ),
-              if (item.description.isNotEmpty) ...[
-                const SizedBox(height: AppTheme.spacing8),
+                const Spacer(),
                 Text(
-                  item.description,
-                  style: AppTheme.bodyMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              const SizedBox(height: AppTheme.spacing12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 16,
+                  _formatDate(item.activityDate),
+                  style: AppTheme.bodySmall.copyWith(
                     color: theme.colorScheme.outline,
                   ),
-                  const SizedBox(width: AppTheme.spacing4),
-                  Text(
-                    '${item.duration.toStringAsFixed(1)} 小时',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _formatDate(item.activityDate),
-                    style: AppTheme.bodySmall.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ],
-              ),
-              // 证明材料指示器
-              if (item.imagePath != null || item.filePath != null) ...[
-                const SizedBox(height: AppTheme.spacing8),
-                InkWell(
-                  onTap: () => _showProofMaterialsDialog(item),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacing8,
-                      vertical: AppTheme.spacing4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.attachment,
-                          size: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: AppTheme.spacing4),
-                        Text(
-                          '已上传证明材料',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (item.imagePath != null) ...[
-                          const SizedBox(width: AppTheme.spacing4),
-                          Icon(
-                            Icons.image,
-                            size: 12,
-                            color: theme.colorScheme.outline,
-                          ),
-                        ],
-                        if (item.filePath != null) ...[
-                          const SizedBox(width: AppTheme.spacing4),
-                          Icon(
-                            Icons.attach_file,
-                            size: 12,
-                            color: theme.colorScheme.outline,
-                          ),
-                        ],
-                        const SizedBox(width: AppTheme.spacing4),
-                        Icon(
-                          Icons.visibility,
-                          size: 12,
-                          color: theme.colorScheme.outline,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
+            ),
+            if (item.imagePath != null || item.filePath != null) ...[
+              const SizedBox(height: AppTheme.spacing8),
+              _AnimatedAttachmentChip(
+                onTap: () => _showProofMaterialsDialog(item),
+                hasImage: item.imagePath != null,
+                hasFile: item.filePath != null,
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -390,16 +366,15 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 主分类
               DropdownButtonFormField<int>(
                 initialValue: _selectedCategoryId,
                 decoration: const InputDecoration(labelText: '主分类'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('全部')),
                   ..._categories.map((category) => DropdownMenuItem(
-                    value: category.id,
-                    child: Text('${category.name} (${category.code})'),
-                  )),
+                        value: category.id,
+                        child: Text('${category.name} (${category.code})'),
+                      )),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -409,20 +384,21 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // 子分类
               if (_subcategories.isNotEmpty) ...[
                 DropdownButtonFormField<int>(
                   initialValue: _selectedSubcategoryId,
                   decoration: const InputDecoration(labelText: '子分类'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('全部')),
-                    ..._subcategories.where((sub) => 
-                      _selectedCategoryId == null || sub.categoryId == _selectedCategoryId
-                    ).map((subcategory) => DropdownMenuItem(
-                      value: subcategory.id,
-                      child: Text('${subcategory.name} (${subcategory.code})'),
-                    )),
+                    ..._subcategories
+                        .where((sub) =>
+                            _selectedCategoryId == null ||
+                            sub.categoryId == _selectedCategoryId)
+                        .map((subcategory) => DropdownMenuItem(
+                              value: subcategory.id,
+                              child:
+                                  Text('${subcategory.name} (${subcategory.code})'),
+                            )),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -432,17 +408,15 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
-              // 活动级别
               DropdownButtonFormField<int>(
                 initialValue: _selectedLevelId,
                 decoration: const InputDecoration(labelText: '活动级别'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('全部')),
                   ..._levels.map((level) => DropdownMenuItem(
-                    value: level.id,
-                    child: Text(level.name),
-                  )),
+                        value: level.id,
+                        child: Text(level.name),
+                      )),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -451,8 +425,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // 获奖状态
               DropdownButtonFormField<bool>(
                 initialValue: _isAwarded,
                 decoration: const InputDecoration(labelText: '获奖状态'),
@@ -468,8 +440,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // 是否代表集体
               DropdownButtonFormField<bool>(
                 initialValue: _isCollective,
                 decoration: const InputDecoration(labelText: '参加类型'),
@@ -485,8 +455,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // 是否为负责人
               DropdownButtonFormField<bool>(
                 initialValue: _isLeader,
                 decoration: const InputDecoration(labelText: '担任角色'),
@@ -538,7 +506,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
 
   void _showSearchDialog() {
     String searchQuery = '';
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -564,14 +532,19 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
               navigator.pop();
               if (searchQuery.isNotEmpty) {
                 try {
-                  final results = await _assessmentItemDao.searchItems(searchQuery);
+                  final results =
+                      await _assessmentItemDao.searchItems(searchQuery);
                   setState(() {
                     _items = results;
                   });
+                  _listAnimationController.forward(from: 0);
                 } catch (e) {
                   if (mounted) {
                     scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('搜索失败: $e')),
+                      SnackBar(
+                        content: Text('搜索失败: $e'),
+                        duration: const Duration(seconds: 2),
+                      ),
                     );
                   }
                 }
@@ -584,7 +557,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     );
   }
 
-  // 显示删除确认对话框
   void _showDeleteConfirmDialog(AssessmentItem item) {
     DeleteConfirmDialog.show(
       context,
@@ -593,7 +565,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     );
   }
 
-  // 显示证明材料预览对话框
   void _showProofMaterialsDialog(AssessmentItem item) {
     showDialog(
       context: context,
@@ -625,7 +596,8 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
               if (item.filePath != null) ...[
                 Card(
                   child: ListTile(
-                    leading: Icon(_getFileIcon(item.filePath!), color: Colors.blue),
+                    leading:
+                        Icon(_getFileIcon(item.filePath!), color: Colors.blue),
                     title: const Text('证明文件'),
                     subtitle: Text(_getFileName(item.filePath!)),
                     trailing: IconButton(
@@ -652,37 +624,31 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     );
   }
 
-  // 预览图片
   void _previewImage(String imagePath) {
     context.push(
       '/image-preview?path=${Uri.encodeComponent(imagePath)}&title=${Uri.encodeComponent('证明图片')}',
     );
   }
 
-  // 预览文件
   void _previewFile(String filePath) {
     final extension = filePath.split('.').last.toLowerCase();
     final fileName = _getFileName(filePath);
-    
+
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension)) {
-      // 如果是图片文件，使用图片预览
       context.push(
         '/image-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent('证明图片')}',
       );
     } else {
-      // 其他文件使用文档预览
       context.push(
         '/document-preview?path=${Uri.encodeComponent(filePath)}&title=${Uri.encodeComponent(fileName)}',
       );
     }
   }
 
-  // 获取文件名
   String _getFileName(String filePath) {
     return filePath.split('/').last.split('\\').last;
   }
 
-  // 获取文件图标
   IconData _getFileIcon(String filePath) {
     final extension = filePath.split('.').last.toLowerCase();
     switch (extension) {
@@ -702,37 +668,38 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     }
   }
 
-  // 删除条目
   Future<void> _deleteItem(AssessmentItem item) async {
     try {
-      // 使用删除服务完整删除条目及其所有文件
       await _deletionService.deleteAssessmentItem(item.id!);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已删除条目「${item.title}」及其所有证明材料')),
+          SnackBar(
+            content: Text('已删除条目「${item.title}」及其所有证明材料'),
+            duration: const Duration(seconds: 2),
+          ),
         );
-        // 触发数据变更事件
         _eventBus.emit(AppEvent.assessmentItemChanged);
-        _loadData(); // 刷新列表
+        _loadData();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败: $e')),
+          SnackBar(
+            content: Text('删除失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
   }
 
-  // 显示导出对话框
   void _showExportDialog() async {
     try {
-      // 获取导出统计信息
       final stats = await _exportService.getExportStatistics();
-      
+
       if (!mounted) return;
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -741,7 +708,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('将导出所有条目的证明材料，并按条目名称重命名后打包：'),
+              const Text('将导出所有条目的证明材料，并按条目名称重命名后打包：'),
               const SizedBox(height: 16),
               Text('• 总条目数：${stats['totalItems']} 个'),
               Text('• 有证明材料的条目：${stats['itemsWithProof']} 个'),
@@ -772,16 +739,18 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
                 child: const Text('取消'),
               ),
               FilledButton(
-                onPressed: (stats['itemsWithProof'] ?? 0) > 0 ? () {
-                  Navigator.of(context).pop();
-                  _startExport();
-                } : null,
+                onPressed: (stats['itemsWithProof'] ?? 0) > 0
+                    ? () {
+                        Navigator.of(context).pop();
+                        _startExport();
+                      }
+                    : null,
                 child: const Text('开始导出'),
               ),
             ] else
-              TextButton(
-                onPressed: null, // 导出过程中禁用按钮
-                child: const Text('正在导出...'),
+              const TextButton(
+                onPressed: null,
+                child: Text('正在导出...'),
               ),
           ],
         ),
@@ -789,15 +758,16 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('获取导出信息失败: $e')),
+          SnackBar(
+            content: Text('获取导出信息失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
   }
 
-  // 开始导出
   void _startExport() async {
-    // 在异步操作开始前获取所需的引用
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     if (!mounted) return;
 
@@ -808,7 +778,6 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     });
 
     try {
-      // 直接执行导出，不显示进度对话框
       final outputPath = await _exportService.exportAllProofMaterials(
         progressCallback: (progress, message) {
           if (mounted) {
@@ -816,11 +785,11 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
               _exportProgress = progress;
               _exportMessage = message;
             });
-            
-            // 使用预先获取的ScaffoldMessenger
+
             scaffoldMessenger.showSnackBar(
               SnackBar(
-                content: Text('导出进度: ${(progress * 100).toStringAsFixed(1)}% - $message'),
+                content: Text(
+                    '导出进度: ${(progress * 100).toStringAsFixed(1)}% - $message'),
                 duration: const Duration(milliseconds: 500),
               ),
             );
@@ -829,12 +798,11 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
       );
 
       if (mounted) {
-        // 显示成功消息
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('已导出所有证明材料: ${outputPath.split('\\').last}'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 2),
             action: SnackBarAction(
               label: '查看位置',
               onPressed: () {
@@ -850,7 +818,7 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
           SnackBar(
             content: Text('导出失败: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -865,10 +833,9 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
     }
   }
 
-  // 显示导出成功对话框
   void _showExportSuccessDialog(String outputPath) {
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -894,6 +861,641 @@ class _AssessmentListPageState extends State<AssessmentListPage> {
             child: const Text('确定'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedAppBarIcon extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  const _AnimatedAppBarIcon({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  @override
+  State<_AnimatedAppBarIcon> createState() => _AnimatedAppBarIconState();
+}
+
+class _AnimatedAppBarIconState extends State<_AnimatedAppBarIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _rotationAnimation = Tween<double>(begin: 0, end: 0.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Transform.rotate(
+              angle: _rotationAnimation.value * math.pi,
+              child: IconButton(
+                icon: Icon(widget.icon),
+                onPressed: null,
+                tooltip: widget.tooltip,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AnimatedFAB extends StatefulWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String? tooltip;
+
+  const _AnimatedFAB({
+    required this.onPressed,
+    required this.icon,
+    this.tooltip,
+  });
+
+  @override
+  State<_AnimatedFAB> createState() => _AnimatedFABState();
+}
+
+class _AnimatedFABState extends State<_AnimatedFAB>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+  late Animation<Offset> _shadowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _rotationAnimation = Tween<double>(begin: 0, end: 0.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<Offset>(
+      begin: const Offset(4, 4),
+      end: const Offset(2, 2),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Transform.rotate(
+              angle: _rotationAnimation.value * math.pi,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.memphisPink,
+                      AppTheme.memphisYellow,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.memphisBlack,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.memphisBlack.withValues(alpha: 0.3),
+                      offset: _shadowAnimation.value,
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AnimatedListItem extends StatefulWidget {
+  final int index;
+  final Widget child;
+
+  const _AnimatedListItem({
+    required this.index,
+    required this.child,
+  });
+
+  @override
+  State<_AnimatedListItem> createState() => _AnimatedListItemState();
+}
+
+class _AnimatedListItemState extends State<_AnimatedListItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    final delay = (widget.index % 10) * 50;
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) _controller.forward();
+    });
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: widget.child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnimatedCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final Color? shadowColor;
+
+  const _AnimatedCard({
+    required this.child,
+    this.onTap,
+    this.shadowColor,
+  });
+
+  @override
+  State<_AnimatedCard> createState() => _AnimatedCardState();
+}
+
+class _AnimatedCardState extends State<_AnimatedCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _hoverController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _shadowAnimation;
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.01).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<double>(begin: 4.0, end: 6.0).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shadowColor = widget.shadowColor ?? AppTheme.memphisBlack;
+
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _hoverController.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _hoverController.reverse();
+      },
+      child: GestureDetector(
+        onTapDown: widget.onTap != null
+            ? (_) => setState(() => _isPressed = true)
+            : null,
+        onTapUp: widget.onTap != null
+            ? (_) => setState(() => _isPressed = false)
+            : null,
+        onTapCancel:
+            widget.onTap != null ? () => setState(() => _isPressed = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _hoverController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _isPressed ? 0.98 : _scaleAnimation.value,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  border: Border.all(
+                    color: AppTheme.memphisBlack,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor.withValues(alpha: _isHovered ? 0.3 : 0.15),
+                      offset: Offset(_shadowAnimation.value, _shadowAnimation.value),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: widget.child,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedPopupMenuButton extends StatefulWidget {
+  final VoidCallback onDeleted;
+
+  const _AnimatedPopupMenuButton({
+    required this.onDeleted,
+  });
+
+  @override
+  State<_AnimatedPopupMenuButton> createState() =>
+      _AnimatedPopupMenuButtonState();
+}
+
+class _AnimatedPopupMenuButtonState extends State<_AnimatedPopupMenuButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete') {
+                  widget.onDeleted();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('删除'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AnimatedAttachmentChip extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool hasImage;
+  final bool hasFile;
+
+  const _AnimatedAttachmentChip({
+    required this.onTap,
+    required this.hasImage,
+    required this.hasFile,
+  });
+
+  @override
+  State<_AnimatedAttachmentChip> createState() =>
+      _AnimatedAttachmentChipState();
+}
+
+class _AnimatedAttachmentChipState extends State<_AnimatedAttachmentChip>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacing8,
+                vertical: AppTheme.spacing4,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.attachment,
+                    size: 14,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: AppTheme.spacing4),
+                  Text(
+                    '已上传证明材料',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (widget.hasImage) ...[
+                    const SizedBox(width: AppTheme.spacing4),
+                    Icon(
+                      Icons.image,
+                      size: 12,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ],
+                  if (widget.hasFile) ...[
+                    const SizedBox(width: AppTheme.spacing4),
+                    Icon(
+                      Icons.attach_file,
+                      size: 12,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ],
+                  const SizedBox(width: AppTheme.spacing4),
+                  Icon(
+                    Icons.visibility,
+                    size: 12,
+                    color: theme.colorScheme.outline,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MemphisAnimatedButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+
+  const _MemphisAnimatedButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+  });
+
+  @override
+  State<_MemphisAnimatedButton> createState() => _MemphisAnimatedButtonState();
+}
+
+class _MemphisAnimatedButtonState extends State<_MemphisAnimatedButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _shadowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<Offset>(
+      begin: const Offset(4, 4),
+      end: const Offset(2, 2),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: widget.backgroundColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.memphisBlack,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.backgroundColor.withValues(alpha: 0.3),
+                    offset: _shadowAnimation.value,
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

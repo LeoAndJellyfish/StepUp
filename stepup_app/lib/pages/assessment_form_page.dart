@@ -140,7 +140,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载数据失败: $e')),
+          SnackBar(
+            content: Text('加载数据失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -702,13 +705,15 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载子分类失败: $e')),
+          SnackBar(
+            content: Text('加载子分类失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
   }
 
-  // AI 智能分类
   Future<void> _performAIClassification() async {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
@@ -716,7 +721,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     if (title.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请先输入活动名称')),
+          const SnackBar(
+            content: Text('请先输入活动名称'),
+            duration: Duration(seconds: 2),
+          ),
         );
       }
       return;
@@ -756,7 +764,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('AI 识别失败: $e')),
+          SnackBar(
+            content: Text('AI 识别失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } finally {
@@ -813,9 +824,11 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('API Key 已保存')),
+                    const SnackBar(
+                      content: Text('API Key 已保存'),
+                      duration: Duration(seconds: 2),
+                    ),
                   );
-                  // 重新尝试 AI 分类
                   _performAIClassification();
                 }
               }
@@ -1071,14 +1084,20 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('图片上传成功: ${attachment.fileName}')),
+            SnackBar(
+              content: Text('图片上传成功: ${attachment.fileName}'),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择图片失败: $e')),
+          SnackBar(
+            content: Text('选择图片失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -1117,14 +1136,20 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('文件上传成功: ${result.files.length} 个文件')),
+            SnackBar(
+              content: Text('文件上传成功: ${result.files.length} 个文件'),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择文件失败: $e')),
+          SnackBar(
+            content: Text('选择文件失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -1144,7 +1169,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     // 显示删除成功通知
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已移除文件: ${attachment.fileName}')),
+        SnackBar(
+          content: Text('已移除文件: ${attachment.fileName}'),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -1291,16 +1319,21 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           _unsavedFilePaths.clear();
           
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(isEditing ? '更新成功' : '添加成功')),
+            SnackBar(
+              content: Text(isEditing ? '更新成功' : '添加成功'),
+              duration: const Duration(seconds: 2),
+            ),
           );
-          // 触发数据变更事件
           _eventBus.emit(AppEvent.assessmentItemChanged);
-          context.pop(true); // 返回true表示有数据变更
+          context.pop(true);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存失败: $e')),
+            SnackBar(
+              content: Text('保存失败: $e'),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       } finally {
@@ -1402,7 +1435,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已删除条目「${_currentItem!.title}」及其所有证明材料')),
+          SnackBar(
+            content: Text('已删除条目「${_currentItem!.title}」及其所有证明材料'),
+            duration: const Duration(seconds: 2),
+          ),
         );
         // 触发数据变更事件
         _eventBus.emit(AppEvent.assessmentItemChanged);
@@ -1411,7 +1447,10 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败: $e')),
+          SnackBar(
+            content: Text('删除失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } finally {

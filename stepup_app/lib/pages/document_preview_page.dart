@@ -263,13 +263,15 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
       if (!await file.exists()) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('文件不存在，无法打开')),
+            const SnackBar(
+              content: Text('文件不存在，无法打开'),
+              duration: Duration(seconds: 2),
+            ),
           );
         }
         return;
       }
 
-      // 使用 file:// URL 方案打开文件
       final uri = Uri.file(widget.documentPath);
       
       if (await canLaunchUrl(uri)) {
@@ -284,7 +286,10 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已使用外部应用打开: ${_fileManager.getFileName(widget.documentPath)}')),
+            SnackBar(
+              content: Text('已使用外部应用打开: ${_fileManager.getFileName(widget.documentPath)}'),
+              duration: const Duration(seconds: 2),
+            ),
           );
         }
       } else {
@@ -293,7 +298,10 @@ class _DocumentPreviewPageState extends State<DocumentPreviewPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('打开失败: $e')),
+          SnackBar(
+            content: Text('打开失败: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }

@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/assessment_item_dao.dart';
 import '../services/event_bus.dart';
 import '../services/user_dao.dart';
+import 'dart:math' as math;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,26 +14,38 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with TickerProviderStateMixin {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
   final EventBus _eventBus = EventBus();
   final UserDao _userDao = UserDao();
-  
+
   Map<String, dynamic>? _statistics;
   bool _isLoading = true;
   String? _error;
-  String? _userName; // 存储用户名
+  String? _userName;
+
+  late AnimationController _mainAnimationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _mainAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _mainAnimationController,
+      curve: Curves.easeOutCubic,
+    );
+
     _loadStatistics();
-    _loadUserName(); // 加载用户名
-    // 监听数据变更事件
+    _loadUserName();
     _eventBus.on(AppEvent.assessmentItemChanged, _loadStatistics);
   }
-  
-  // 加载用户名
+
   Future<void> _loadUserName() async {
     try {
       final user = await _userDao.getFirstUser();
@@ -48,8 +61,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    // 移除事件监听
     _eventBus.off(AppEvent.assessmentItemChanged, _loadStatistics);
+    _mainAnimationController.dispose();
     super.dispose();
   }
 
@@ -61,11 +74,13 @@ class _HomePageState extends State<HomePage> {
       });
 
       final stats = await _assessmentItemDao.getStatistics();
-      
+
       setState(() {
         _statistics = stats;
         _isLoading = false;
       });
+
+      _mainAnimationController.forward(from: 0);
     } catch (e) {
       setState(() {
         _error = '加载统计数据失败: $e';
@@ -80,13 +95,13 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('StepUp 综合测评'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
+          _AnimatedAppBarIcon(
+            icon: Icons.refresh,
             onPressed: _loadStatistics,
             tooltip: '刷新统计数据',
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
+          _AnimatedAppBarIcon(
+            icon: Icons.settings,
             onPressed: () => context.push('/settings'),
           ),
         ],
@@ -119,19 +134,28 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeSection(),
-          const SizedBox(height: AppTheme.spacing24),
-          _buildOverviewStats(),
-          const SizedBox(height: AppTheme.spacing24),
-          _buildQuickActions(),
-          const SizedBox(height: AppTheme.spacing24),
-          _buildCategoryStats(),
-        ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.02),
+          end: Offset.zero,
+        ).animate(_fadeAnimation),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWelcomeSection(),
+              const SizedBox(height: AppTheme.spacing24),
+              _buildOverviewStats(),
+              const SizedBox(height: AppTheme.spacing24),
+              _buildQuickActions(),
+              const SizedBox(height: AppTheme.spacing24),
+              _buildCategoryStats(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -140,7 +164,7 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     final hour = now.hour;
     String greeting;
-    
+
     if (hour < 6) {
       greeting = '夜深了';
     } else if (hour < 12) {
@@ -151,24 +175,69 @@ class _HomePageState extends State<HomePage> {
       greeting = '晚上好';
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$greeting，${_userName ?? '同学'}！',
-              style: AppTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppTheme.spacing8),
-            Text(
-              '每一步努力，都是成长的足迹！',
-              style: AppTheme.bodyMedium.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+    return _AnimatedCard(
+      index: 0,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.memphisPink,
+                          AppTheme.memphisYellow,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppTheme.memphisBlack,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.memphisBlack.withValues(alpha: 0.15),
+                          offset: const Offset(3, 3),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.wb_sunny,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$greeting，${_userName ?? '同学'}！',
+                          style: AppTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: AppTheme.spacing4),
+                        Text(
+                          '每一步努力，都是成长的足迹！',
+                          style: AppTheme.bodyMedium.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -176,35 +245,44 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildOverviewStats() {
     final stats = _statistics!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '总览',
-          style: AppTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing8),
+          child: Text(
+            '总览',
+            style: AppTheme.titleLarge,
+          ),
         ),
         const SizedBox(height: AppTheme.spacing12),
         SizedBox(
-          height: 140, // 固定高度以防止溢出，增加高度以防止数字被遮挡
+          height: 150,
           child: Row(
             children: [
               Expanded(
-                child: StatsCard(
-                  title: '总条目',
-                  value: '${stats['totalCount'] ?? 0}',
-                  icon: Icons.assignment,
-                  color: Colors.blue,
-                  onTap: () => context.go('/assessment'),
+                child: _AnimatedCard(
+                  index: 1,
+                  child: _AnimatedStatsCard(
+                    title: '总条目',
+                    value: '${stats['totalCount'] ?? 0}',
+                    icon: Icons.assignment,
+                    color: AppTheme.memphisBlue,
+                    onTap: () => context.go('/assessment'),
+                  ),
                 ),
               ),
               const SizedBox(width: AppTheme.spacing8),
               Expanded(
-                child: StatsCard(
-                  title: '总时长',
-                  value: '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h',
-                  icon: Icons.access_time,
-                  color: Colors.green,
+                child: _AnimatedCard(
+                  index: 2,
+                  child: _AnimatedStatsCard(
+                    title: '总时长',
+                    value: '${(stats['totalDuration'] ?? 0.0).toStringAsFixed(1)}h',
+                    icon: Icons.access_time,
+                    color: AppTheme.memphisGreen,
+                  ),
                 ),
               ),
             ],
@@ -218,26 +296,39 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '快捷操作',
-          style: AppTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing8),
+          child: Text(
+            '快捷操作',
+            style: AppTheme.titleLarge,
+          ),
         ),
         const SizedBox(height: AppTheme.spacing12),
         Row(
           children: [
             Expanded(
-              child: FilledButton.icon(
-                onPressed: () => context.push('/assessment/add'),
-                icon: const Icon(Icons.add),
-                label: const Text('添加条目'),
+              child: _AnimatedCard(
+                index: 3,
+                child: _MemphisActionButton(
+                  onPressed: () => context.push('/assessment/add'),
+                  icon: Icons.add,
+                  label: '添加条目',
+                  backgroundColor: AppTheme.memphisPink,
+                  isFilled: true,
+                ),
               ),
             ),
             const SizedBox(width: AppTheme.spacing12),
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => context.go('/categories'),
-                icon: const Icon(Icons.category),
-                label: const Text('管理分类'),
+              child: _AnimatedCard(
+                index: 4,
+                child: _MemphisActionButton(
+                  onPressed: () => context.go('/categories'),
+                  icon: Icons.category,
+                  label: '管理分类',
+                  backgroundColor: AppTheme.memphisYellow,
+                  isFilled: false,
+                ),
               ),
             ),
           ],
@@ -248,7 +339,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryStats() {
     final categoryStats = _statistics!['categoryStats'] as List<Map<String, dynamic>>;
-    
+
     if (categoryStats.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -256,9 +347,12 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '分类统计',
-          style: AppTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing8),
+          child: Text(
+            '分类统计',
+            style: AppTheme.titleLarge,
+          ),
         ),
         const SizedBox(height: AppTheme.spacing12),
         ListView.builder(
@@ -267,39 +361,571 @@ class _HomePageState extends State<HomePage> {
           itemCount: categoryStats.length,
           itemBuilder: (context, index) {
             final category = categoryStats[index];
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Color(
-                    int.parse(category['category_color'].substring(1), radix: 16) + 0xFF000000,
-                  ).withValues(alpha: 0.2),
-                  child: Icon(
-                    Icons.category,
-                    color: Color(
-                      int.parse(category['category_color'].substring(1), radix: 16) + 0xFF000000,
-                    ),
-                  ),
-                ),
-                title: Text(category['category_name'] ?? '未知分类'),
-                subtitle: Text('${category['count']} 个条目'),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${(category['total_duration'] ?? 0.0).toStringAsFixed(1)} 时',
-                      style: AppTheme.bodySmall.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
-                  ],
-                ),
+            return _AnimatedCard(
+              index: 5 + index,
+              child: _AnimatedCategoryCard(
+                category: category,
                 onTap: () => context.go('/assessment'),
               ),
             );
           },
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedAppBarIcon extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  const _AnimatedAppBarIcon({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  @override
+  State<_AnimatedAppBarIcon> createState() => _AnimatedAppBarIconState();
+}
+
+class _AnimatedAppBarIconState extends State<_AnimatedAppBarIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _rotationAnimation = Tween<double>(begin: 0, end: 0.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Transform.rotate(
+              angle: _rotationAnimation.value * math.pi,
+              child: IconButton(
+                icon: Icon(widget.icon),
+                onPressed: null,
+                tooltip: widget.tooltip,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AnimatedCard extends StatefulWidget {
+  final Widget child;
+  final int index;
+
+  const _AnimatedCard({
+    required this.child,
+    required this.index,
+  });
+
+  @override
+  State<_AnimatedCard> createState() => _AnimatedCardState();
+}
+
+class _AnimatedCardState extends State<_AnimatedCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    final delay = widget.index * 80;
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) _controller.forward();
+    });
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: widget.child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnimatedStatsCard extends StatefulWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _AnimatedStatsCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  State<_AnimatedStatsCard> createState() => _AnimatedStatsCardState();
+}
+
+class _AnimatedStatsCardState extends State<_AnimatedStatsCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _hoverController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _shadowAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<double>(begin: 4.0, end: 6.0).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return MouseRegion(
+      onEnter: (_) => _hoverController.forward(),
+      onExit: (_) => _hoverController.reverse(),
+      child: GestureDetector(
+        onTapDown: widget.onTap != null ? (_) => setState(() => _isPressed = true) : null,
+        onTapUp: widget.onTap != null ? (_) => setState(() => _isPressed = false) : null,
+        onTapCancel: widget.onTap != null ? () => setState(() => _isPressed = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _hoverController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _isPressed ? 0.98 : _scaleAnimation.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  border: Border.all(
+                    color: AppTheme.memphisBlack,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withValues(alpha: 0.3),
+                      offset: Offset(_shadowAnimation.value, _shadowAnimation.value),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTheme.spacing16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: widget.color.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: widget.color,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Icon(
+                              widget.icon,
+                              color: widget.color,
+                              size: 20,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (widget.onTap != null)
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color: theme.colorScheme.outline,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppTheme.spacing12),
+                      Flexible(
+                        child: Text(
+                          widget.value,
+                          style: AppTheme.headlineSmall.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacing4),
+                      Flexible(
+                        child: Text(
+                          widget.title,
+                          style: AppTheme.bodySmall.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedCategoryCard extends StatefulWidget {
+  final Map<String, dynamic> category;
+  final VoidCallback? onTap;
+
+  const _AnimatedCategoryCard({
+    required this.category,
+    this.onTap,
+  });
+
+  @override
+  State<_AnimatedCategoryCard> createState() => _AnimatedCategoryCardState();
+}
+
+class _AnimatedCategoryCardState extends State<_AnimatedCategoryCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _hoverController;
+  late Animation<double> _scaleAnimation;
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.01).animate(
+      CurvedAnimation(parent: _hoverController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final categoryColor = Color(
+      int.parse(widget.category['category_color'].substring(1), radix: 16) + 0xFF000000,
+    );
+
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovered = true);
+        _hoverController.forward();
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+        _hoverController.reverse();
+      },
+      child: GestureDetector(
+        onTapDown: widget.onTap != null ? (_) => setState(() => _isPressed = true) : null,
+        onTapUp: widget.onTap != null ? (_) => setState(() => _isPressed = false) : null,
+        onTapCancel: widget.onTap != null ? () => setState(() => _isPressed = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _hoverController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _isPressed ? 0.98 : _scaleAnimation.value,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  border: Border.all(
+                    color: AppTheme.memphisBlack,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: categoryColor.withValues(alpha: _isHovered ? 0.3 : 0.15),
+                      offset: Offset(_isHovered ? 5 : 4, _isHovered ? 5 : 4),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTheme.spacing16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: categoryColor,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.category,
+                          color: categoryColor,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spacing12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.category['category_name'] ?? '未知分类',
+                              style: AppTheme.titleMedium,
+                            ),
+                            const SizedBox(height: AppTheme.spacing4),
+                            Text(
+                              '${widget.category['count']} 个条目',
+                              style: AppTheme.bodySmall.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${(widget.category['total_duration'] ?? 0.0).toStringAsFixed(1)} 时',
+                            style: AppTheme.titleSmall.copyWith(
+                              color: categoryColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: AppTheme.spacing8),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: theme.colorScheme.outline,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _MemphisActionButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final bool isFilled;
+
+  const _MemphisActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.isFilled,
+  });
+
+  @override
+  State<_MemphisActionButton> createState() => _MemphisActionButtonState();
+}
+
+class _MemphisActionButtonState extends State<_MemphisActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _shadowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<Offset>(
+      begin: const Offset(4, 4),
+      end: const Offset(2, 2),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: widget.isFilled ? widget.backgroundColor : null,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.memphisBlack,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.backgroundColor.withValues(alpha: 0.3),
+                    offset: _shadowAnimation.value,
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 18,
+                    color: widget.isFilled ? Colors.white : AppTheme.memphisBlack,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: widget.isFilled ? Colors.white : AppTheme.memphisBlack,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

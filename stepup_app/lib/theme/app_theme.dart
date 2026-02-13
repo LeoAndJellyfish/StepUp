@@ -187,6 +187,21 @@ class AppTheme {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: primaryColor,
+      contentTextStyle: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: memphisBlack, width: 2),
+      ),
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: accentBlue,
@@ -367,6 +382,21 @@ class AppTheme {
         side: const BorderSide(color: secondaryColor, width: 1.5),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: primaryColor,
+      contentTextStyle: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: secondaryColor, width: 2),
+      ),
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
   );
 
@@ -717,6 +747,733 @@ class _DotsPattern extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class MemphisAnimations {
+  static const Duration durationFast = Duration(milliseconds: 150);
+  static const Duration durationNormal = Duration(milliseconds: 300);
+  static const Duration durationSlow = Duration(milliseconds: 500);
+  static const Duration durationVerySlow = Duration(milliseconds: 800);
+
+  static const Curve bounceOut = _BounceOutCurve();
+  static const Curve elasticOut = _ElasticOutCurve();
+  static const Curve overshoot = _OvershootCurve();
+  static const Curve memphisEase = _MemphisEaseCurve();
+
+  static Widget animatedScale({
+    required Widget child,
+    required bool condition,
+    Duration duration = durationNormal,
+    Curve curve = overshoot,
+    double scale = 1.02,
+  }) {
+    return AnimatedScale(
+      scale: condition ? scale : 1.0,
+      duration: duration,
+      curve: curve,
+      child: child,
+    );
+  }
+
+  static Widget animatedSlideIn({
+    required Widget child,
+    required Animation<double> animation,
+    Offset beginOffset = const Offset(0.0, 0.1),
+    Curve curve = memphisEase,
+  }) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: beginOffset,
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: curve,
+      )),
+      child: child,
+    );
+  }
+
+  static Widget animatedFadeSlide({
+    required Widget child,
+    required Animation<double> animation,
+    Offset beginOffset = const Offset(0.0, 0.05),
+    Curve curve = memphisEase,
+  }) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: curve,
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: beginOffset,
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: curve,
+        )),
+        child: child,
+      ),
+    );
+  }
+
+  static Widget staggeredList({
+    required Widget child,
+    required int index,
+    required Animation<double> animation,
+    Duration staggerDelay = const Duration(milliseconds: 50),
+    Curve curve = memphisEase,
+  }) {
+    final delayedAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: Interval(
+          staggerDelay.inMilliseconds * index / 1000.0,
+          (staggerDelay.inMilliseconds * index / 1000.0) + 0.3,
+          curve: curve,
+        ),
+      ),
+    );
+
+    return FadeTransition(
+      opacity: delayedAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.0, 0.1),
+          end: Offset.zero,
+        ).animate(delayedAnimation),
+        child: child,
+      ),
+    );
+  }
+
+  static Widget shimmerEffect({
+    required Widget child,
+    required Color baseColor,
+    required Color highlightColor,
+  }) {
+    return _ShimmerEffect(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: child,
+    );
+  }
+
+  static Widget pulseAnimation({
+    required Widget child,
+    Duration duration = const Duration(milliseconds: 1000),
+    double minScale = 0.97,
+    double maxScale = 1.0,
+  }) {
+    return _PulseAnimation(
+      duration: duration,
+      minScale: minScale,
+      maxScale: maxScale,
+      child: child,
+    );
+  }
+
+  static Widget wobbleAnimation({
+    required Widget child,
+    Duration duration = const Duration(milliseconds: 500),
+  }) {
+    return _WobbleAnimation(
+      duration: duration,
+      child: child,
+    );
+  }
+
+  static Widget bounceInAnimation({
+    required Widget child,
+    Duration duration = const Duration(milliseconds: 600),
+    Duration delay = Duration.zero,
+  }) {
+    return _BounceInAnimation(
+      duration: duration,
+      delay: delay,
+      child: child,
+    );
+  }
+
+  static Widget colorShiftAnimation({
+    required Widget child,
+    required List<Color> colors,
+    Duration duration = const Duration(milliseconds: 3000),
+  }) {
+    return _ColorShiftAnimation(
+      colors: colors,
+      duration: duration,
+      child: child,
+    );
+  }
+}
+
+class _BounceOutCurve extends Curve {
+  const _BounceOutCurve();
+
+  @override
+  double transform(double t) {
+    if (t < 0.3636) {
+      return 2.75 * t * t;
+    } else if (t < 0.7272) {
+      return 2.75 * (t - 0.5454) * (t - 0.5454) + 0.75;
+    } else if (t < 0.909) {
+      return 2.75 * (t - 0.8181) * (t - 0.8181) + 0.9375;
+    }
+    return 2.75 * (t - 0.9545) * (t - 0.9545) + 0.984375;
+  }
+}
+
+class _ElasticOutCurve extends Curve {
+  const _ElasticOutCurve();
+
+  @override
+  double transform(double t) {
+    if (t == 0 || t == 1) return t;
+    return math.pow(2.0, -10.0 * t) * math.sin((t - 0.1) * 5.0 * math.pi) + 1.0;
+  }
+}
+
+class _OvershootCurve extends Curve {
+  const _OvershootCurve();
+
+  @override
+  double transform(double t) {
+    return (t * t * ((2.5 + 1) * t - 2.5)) + 1.0;
+  }
+}
+
+class _MemphisEaseCurve extends Curve {
+  const _MemphisEaseCurve();
+
+  @override
+  double transform(double t) {
+    return 1.0 - math.pow(1.0 - t, 3.0);
+  }
+}
+
+class _ShimmerEffect extends StatefulWidget {
+  final Widget child;
+  final Color baseColor;
+  final Color highlightColor;
+
+  const _ShimmerEffect({
+    required this.child,
+    required this.baseColor,
+    required this.highlightColor,
+  });
+
+  @override
+  State<_ShimmerEffect> createState() => _ShimmerEffectState();
+}
+
+class _ShimmerEffectState extends State<_ShimmerEffect>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+    _animation = Tween<double>(begin: -2, end: 2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                widget.baseColor,
+                widget.highlightColor,
+                widget.baseColor,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              transform: _SlideGradientTransform(_animation.value),
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.srcATop,
+          child: widget.child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _SlideGradientTransform extends GradientTransform {
+  final double slidePercent;
+
+  const _SlideGradientTransform(this.slidePercent);
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(bounds.width * slidePercent, 0.0, 0.0);
+  }
+}
+
+class _PulseAnimation extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final double minScale;
+  final double maxScale;
+
+  const _PulseAnimation({
+    required this.child,
+    required this.duration,
+    required this.minScale,
+    required this.maxScale,
+  });
+
+  @override
+  State<_PulseAnimation> createState() => _PulseAnimationState();
+}
+
+class _PulseAnimationState extends State<_PulseAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(
+      begin: widget.minScale,
+      end: widget.maxScale,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _animation.value,
+          child: widget.child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _WobbleAnimation extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+
+  const _WobbleAnimation({
+    required this.child,
+    required this.duration,
+  });
+
+  @override
+  State<_WobbleAnimation> createState() => _WobbleAnimationState();
+}
+
+class _WobbleAnimationState extends State<_WobbleAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+    _animation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0, end: 0.05), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.05, end: -0.03), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.03, end: 0.02), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.02, end: -0.01), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.01, end: 0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  void trigger() {
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _animation.value * math.pi,
+          child: widget.child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _BounceInAnimation extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final Duration delay;
+
+  const _BounceInAnimation({
+    required this.child,
+    required this.duration,
+    required this.delay,
+  });
+
+  @override
+  State<_BounceInAnimation> createState() => _BounceInAnimationState();
+}
+
+class _BounceInAnimationState extends State<_BounceInAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    if (widget.delay == Duration.zero) {
+      _controller.forward();
+    } else {
+      Future.delayed(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: widget.child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _ColorShiftAnimation extends StatefulWidget {
+  final Widget child;
+  final List<Color> colors;
+  final Duration duration;
+
+  const _ColorShiftAnimation({
+    required this.child,
+    required this.colors,
+    required this.duration,
+  });
+
+  @override
+  State<_ColorShiftAnimation> createState() => _ColorShiftAnimationState();
+}
+
+class _ColorShiftAnimationState extends State<_ColorShiftAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: widget.colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              transform: _SlideGradientTransform(_controller.value),
+            ).createShader(bounds);
+          },
+          child: widget.child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class MemphisAnimatedCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final Color? shadowColor;
+  final Duration hoverDuration;
+  final Duration tapDuration;
+
+  const MemphisAnimatedCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.shadowColor,
+    this.hoverDuration = const Duration(milliseconds: 200),
+    this.tapDuration = const Duration(milliseconds: 100),
+  });
+
+  @override
+  State<MemphisAnimatedCard> createState() => _MemphisAnimatedCardState();
+}
+
+class _MemphisAnimatedCardState extends State<MemphisAnimatedCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _shadowAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.hoverDuration,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<double>(begin: 4.0, end: 6.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+  }
+
+  void _onTapCancel() {
+    setState(() => _isPressed = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => _controller.forward(),
+      onExit: (_) => _controller.reverse(),
+      child: GestureDetector(
+        onTapDown: widget.onTap != null ? _onTapDown : null,
+        onTapUp: widget.onTap != null ? _onTapUp : null,
+        onTapCancel: widget.onTap != null ? _onTapCancel : null,
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _isPressed ? 0.98 : _scaleAnimation.value,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: (widget.shadowColor ?? AppTheme.memphisBlack)
+                          .withValues(alpha: 0.2),
+                      offset: Offset(_shadowAnimation.value, _shadowAnimation.value),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: widget.child,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class MemphisAnimatedButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onPressed;
+  final Color? backgroundColor;
+  final Color? shadowColor;
+  final bool isFilled;
+
+  const MemphisAnimatedButton({
+    super.key,
+    required this.child,
+    this.onPressed,
+    this.backgroundColor,
+    this.shadowColor,
+    this.isFilled = true,
+  });
+
+  @override
+  State<MemphisAnimatedButton> createState() => _MemphisAnimatedButtonState();
+}
+
+class _MemphisAnimatedButtonState extends State<MemphisAnimatedButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _shadowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _shadowAnimation = Tween<Offset>(
+      begin: const Offset(4, 4),
+      end: const Offset(2, 2),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = widget.backgroundColor ?? AppTheme.primaryColor;
+    final shadowColor = widget.shadowColor ?? AppTheme.memphisBlack;
+
+    return GestureDetector(
+      onTapDown: widget.onPressed != null
+          ? (_) => _controller.forward()
+          : null,
+      onTapUp: widget.onPressed != null
+          ? (_) {
+              _controller.reverse();
+              widget.onPressed?.call();
+            }
+          : null,
+      onTapCancel: widget.onPressed != null
+          ? () => _controller.reverse()
+          : null,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.isFilled ? bgColor : null,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.memphisBlack,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: shadowColor.withValues(alpha: 0.3),
+                    offset: _shadowAnimation.value,
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: widget.child,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ZigzagPattern extends CustomPainter {
   final Color color;
   final double strokeWidth;
@@ -901,4 +1658,516 @@ class _StripedPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class MemphisPageTransitions {
+  static Widget slideFadeTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+    Offset beginOffset = const Offset(0.1, 0.0),
+  }) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: beginOffset,
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        )),
+        child: child,
+      ),
+    );
+  }
+
+  static Widget scaleFadeTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+    double beginScale = 0.95,
+  }) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      ),
+      child: ScaleTransition(
+        scale: Tween<double>(
+          begin: beginScale,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        )),
+        child: child,
+      ),
+    );
+  }
+
+  static Widget memphisSlideTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+  }) {
+    final slideAnimation = Tween<Offset>(
+      begin: const Offset(1.0, 0.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: animation,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+    ));
+
+    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+      ),
+    );
+
+    final scaleAnimation = Tween<double>(begin: 0.98, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: SlideTransition(
+        position: slideAnimation,
+        child: ScaleTransition(
+          scale: scaleAnimation,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  static Widget memphisPopTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+  }) {
+    final scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
+      ),
+    );
+
+    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        child: child,
+      ),
+    );
+  }
+
+  static Widget memphisSharedAxisTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required Widget child,
+    Axis direction = Axis.horizontal,
+  }) {
+    final offset = direction == Axis.horizontal
+        ? const Offset(0.1, 0.0)
+        : const Offset(0.0, 0.1);
+
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: offset,
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+        )),
+        child: child,
+      ),
+    );
+  }
+}
+
+class MemphisAnimatedList extends StatefulWidget {
+  final int itemCount;
+  final Widget Function(BuildContext, int) itemBuilder;
+  final Duration staggerDelay;
+  final Duration itemDuration;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
+  final ScrollController? controller;
+
+  const MemphisAnimatedList({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+    this.staggerDelay = const Duration(milliseconds: 50),
+    this.itemDuration = const Duration(milliseconds: 400),
+    this.physics,
+    this.padding,
+    this.controller,
+  });
+
+  @override
+  State<MemphisAnimatedList> createState() => _MemphisAnimatedListState();
+}
+
+class _MemphisAnimatedListState extends State<MemphisAnimatedList>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(
+        milliseconds: widget.itemDuration.inMilliseconds +
+            (widget.staggerDelay.inMilliseconds * widget.itemCount),
+      ),
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(MemphisAnimatedList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.itemCount != widget.itemCount) {
+      _controller.duration = Duration(
+        milliseconds: widget.itemDuration.inMilliseconds +
+            (widget.staggerDelay.inMilliseconds * widget.itemCount),
+      );
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: widget.controller,
+      physics: widget.physics,
+      padding: widget.padding,
+      itemCount: widget.itemCount,
+      itemBuilder: (context, index) {
+        final startDelay = index * widget.staggerDelay.inMilliseconds / 1000.0;
+        final endDelay = startDelay + (widget.itemDuration.inMilliseconds / 1000.0);
+
+        final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Interval(
+              startDelay.clamp(0.0, 1.0),
+              endDelay.clamp(0.0, 1.0),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: widget.itemBuilder(context, index),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MemphisAnimatedGrid extends StatefulWidget {
+  final int itemCount;
+  final Widget Function(BuildContext, int) itemBuilder;
+  final SliverGridDelegate gridDelegate;
+  final Duration staggerDelay;
+  final Duration itemDuration;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
+  final ScrollController? controller;
+
+  const MemphisAnimatedGrid({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.gridDelegate,
+    this.staggerDelay = const Duration(milliseconds: 30),
+    this.itemDuration = const Duration(milliseconds: 400),
+    this.physics,
+    this.padding,
+    this.controller,
+  });
+
+  @override
+  State<MemphisAnimatedGrid> createState() => _MemphisAnimatedGridState();
+}
+
+class _MemphisAnimatedGridState extends State<MemphisAnimatedGrid>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(
+        milliseconds: widget.itemDuration.inMilliseconds +
+            (widget.staggerDelay.inMilliseconds * widget.itemCount),
+      ),
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(MemphisAnimatedGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.itemCount != widget.itemCount) {
+      _controller.duration = Duration(
+        milliseconds: widget.itemDuration.inMilliseconds +
+            (widget.staggerDelay.inMilliseconds * widget.itemCount),
+      );
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      controller: widget.controller,
+      physics: widget.physics,
+      padding: widget.padding,
+      gridDelegate: widget.gridDelegate,
+      itemCount: widget.itemCount,
+      itemBuilder: (context, index) {
+        final startDelay = index * widget.staggerDelay.inMilliseconds / 1000.0;
+        final endDelay = startDelay + (widget.itemDuration.inMilliseconds / 1000.0);
+
+        final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Interval(
+              startDelay.clamp(0.0, 1.0),
+              endDelay.clamp(0.0, 1.0),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+            child: widget.itemBuilder(context, index),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MemphisFloatingActionButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final Widget icon;
+  final String? tooltip;
+  final Color? backgroundColor;
+  final Color? shadowColor;
+
+  const MemphisFloatingActionButton({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    this.tooltip,
+    this.backgroundColor,
+    this.shadowColor,
+  });
+
+  @override
+  State<MemphisFloatingActionButton> createState() =>
+      _MemphisFloatingActionButtonState();
+}
+
+class _MemphisFloatingActionButtonState
+    extends State<MemphisFloatingActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = widget.backgroundColor ?? AppTheme.primaryColor;
+    final shadowColor = widget.shadowColor ?? AppTheme.memphisBlack;
+
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Transform.rotate(
+              angle: _rotationAnimation.value * math.pi,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.memphisBlack,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor.withValues(alpha: 0.3),
+                      offset: const Offset(4, 4),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Center(child: widget.icon),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class MemphisAnimatedIcon extends StatefulWidget {
+  final IconData icon;
+  final double size;
+  final Color? color;
+  final Duration duration;
+  final bool animateOnLoad;
+
+  const MemphisAnimatedIcon({
+    super.key,
+    required this.icon,
+    this.size = 24,
+    this.color,
+    this.duration = const Duration(milliseconds: 300),
+    this.animateOnLoad = true,
+  });
+
+  @override
+  State<MemphisAnimatedIcon> createState() => _MemphisAnimatedIconState();
+}
+
+class _MemphisAnimatedIconState extends State<MemphisAnimatedIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _rotationAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.1), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.1, end: -0.05), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.05, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    if (widget.animateOnLoad) {
+      _controller.forward();
+    }
+  }
+
+  void animate() {
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Transform.rotate(
+            angle: _rotationAnimation.value * math.pi,
+            child: Icon(
+              widget.icon,
+              size: widget.size,
+              color: widget.color,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

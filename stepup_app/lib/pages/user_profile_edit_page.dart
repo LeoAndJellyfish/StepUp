@@ -112,7 +112,10 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       // 返回上一页
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('个人信息已保存')),
+          const SnackBar(
+            content: Text('个人信息已保存'),
+            duration: Duration(seconds: 2),
+          ),
         );
         context.pop();
       }
