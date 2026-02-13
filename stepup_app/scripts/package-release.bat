@@ -43,37 +43,35 @@ mkdir "%PACKAGE_DIR%"
 xcopy "%SOURCE_DIR%\*" "%PACKAGE_DIR%\" /E /I /Q /Y
 
 echo 创建README文件...
-(
-echo StepUp综测系统 v%VERSION% %DESCRIPTION%
-echo ================================================================
-echo.
-echo 版本信息：
-echo - 版本号：v%VERSION%
-echo - 版本类型：%DESCRIPTION%
-echo - 构建时间：%date% %time%
-echo - 目标平台：Windows 10+ ^(64位^)
-echo.
-echo 安装和运行：
-echo 1. 本应用为便携式版本，无需安装
-echo 2. 直接双击 stepup_app.exe 启动应用
-echo 3. 首次运行会自动创建数据库文件
-echo.
-echo 主要功能：
-echo - 综合测评条目管理
-echo - 分类和级别管理
-echo - 证明材料上传^(图片和文档^)
-echo - 数据统计和分析
-echo - 文件预览功能
-echo - 外部应用打开文件
-echo.
-echo 文件存储：
-echo - 数据库文件：应用目录下自动创建
-echo - 证明材料：应用目录\data\proof_materials\
-echo - 配置文件：应用目录下自动创建
-echo.
-echo 技术支持：
-echo 如有问题，请联系开发团队
-) > "%PACKAGE_DIR%\README.txt"
+echo StepUp综测系统 v%VERSION% %DESCRIPTION% > "%PACKAGE_DIR%\README.txt"
+echo ================================================================ >> "%PACKAGE_DIR%\README.txt"
+echo. >> "%PACKAGE_DIR%\README.txt"
+echo 版本信息： >> "%PACKAGE_DIR%\README.txt"
+echo - 版本号：v%VERSION% >> "%PACKAGE_DIR%\README.txt"
+echo - 版本类型：%DESCRIPTION% >> "%PACKAGE_DIR%\README.txt"
+echo - 构建时间：%date% %time% >> "%PACKAGE_DIR%\README.txt"
+echo - 目标平台：Windows 10+ ^(64位^) >> "%PACKAGE_DIR%\README.txt"
+echo. >> "%PACKAGE_DIR%\README.txt"
+echo 安装和运行： >> "%PACKAGE_DIR%\README.txt"
+echo 1. 本应用为便携式版本，无需安装 >> "%PACKAGE_DIR%\README.txt"
+echo 2. 直接双击 stepup_app.exe 启动应用 >> "%PACKAGE_DIR%\README.txt"
+echo 3. 首次运行会自动创建数据库文件 >> "%PACKAGE_DIR%\README.txt"
+echo. >> "%PACKAGE_DIR%\README.txt"
+echo 主要功能： >> "%PACKAGE_DIR%\README.txt"
+echo - 综合测评条目管理 >> "%PACKAGE_DIR%\README.txt"
+echo - 分类和级别管理 >> "%PACKAGE_DIR%\README.txt"
+echo - 证明材料上传^(图片和文档^) >> "%PACKAGE_DIR%\README.txt"
+echo - 数据统计和分析 >> "%PACKAGE_DIR%\README.txt"
+echo - 文件预览功能 >> "%PACKAGE_DIR%\README.txt"
+echo - 外部应用打开文件 >> "%PACKAGE_DIR%\README.txt"
+echo. >> "%PACKAGE_DIR%\README.txt"
+echo 文件存储： >> "%PACKAGE_DIR%\README.txt"
+echo - 数据库文件：应用目录下自动创建 >> "%PACKAGE_DIR%\README.txt"
+echo - 证明材料：应用目录\data\proof_materials\ >> "%PACKAGE_DIR%\README.txt"
+echo - 配置文件：应用目录下自动创建 >> "%PACKAGE_DIR%\README.txt"
+echo. >> "%PACKAGE_DIR%\README.txt"
+echo 技术支持： >> "%PACKAGE_DIR%\README.txt"
+echo 如有问题，请联系开发团队 >> "%PACKAGE_DIR%\README.txt"
 
 echo 创建版本信息文件...
 (
@@ -100,9 +98,3 @@ echo 版本：v%VERSION% (%DESCRIPTION%)
 echo 发行包路径：%PACKAGE_DIR%
 echo 压缩包路径：%VERSION_DIR%\%PACKAGE_NAME%.zip
 echo.
-
-dir "%VERSION_DIR%" /B
-
-echo.
-echo 版本管理完成！按任意键退出...
-pause >nul
