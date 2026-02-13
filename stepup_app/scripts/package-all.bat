@@ -64,6 +64,16 @@ if /i "%CLEAN_BUILD%"=="y" (
     if errorlevel 1 (
         echo [警告] flutter clean 失败，继续构建...
     )
+    echo.
+    echo ========================================
+    echo 获取依赖...
+    echo ========================================
+    cmd /c flutter pub get
+    if errorlevel 1 (
+        echo [错误] flutter pub get 失败
+        pause
+        exit /b 1
+    )
 )
 
 echo.
