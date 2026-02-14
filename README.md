@@ -100,11 +100,7 @@ https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=ms
 ## 📱 支持平台
 
 - ✅ Android
-- ✅ iOS  
 - ✅ Windows
-- ✅ macOS
-- ✅ Linux
-- ✅ Web
 
 ## 🤝 贡献指南
 
