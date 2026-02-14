@@ -119,7 +119,25 @@ def main():
 
     # 步骤 5: 构建 Android
     print_step(5, 5, "构建 Android 应用")
-    if not run_command("flutter build apk --release"):
+    # 临时使用国内镜像加速下载
+    env = os.environ.copy()
+    # Flutter 相关镜像
+    env["FLUTTER_STORAGE_BASE_URL"] = "https://storage.flutter-io.cn"
+    env["PUB_HOSTED_URL"] = "https://pub.flutter-io.cn"
+
+    result = subprocess.run(
+        "flutter build apk --release",
+        shell=True,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        errors='ignore'
+    )
+    if result.returncode != 0:
+        print("[错误] Android 构建失败！")
+        if result.stderr:
+            print(result.stderr)
         input("\n按回车键退出...")
         sys.exit(1)
     print("      Android 构建完成")
