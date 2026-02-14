@@ -62,11 +62,11 @@ def create_zip_archive(source_dir, output_path):
 
 
 def package_windows(project_root, version_dir, version):
-    """打包 Windows 版本"""
-    print_section("打包 Windows 版本")
+    """打包 Windows 便携版"""
+    print_section("打包 Windows 便携版")
 
     win_source = project_root / "build" / "windows" / "x64" / "runner" / "Release"
-    package_name = f"StepUp_v{version}_windows"
+    package_name = f"StepUp_v{version}_windows_portable"
     package_dir = version_dir / package_name
 
     if not (win_source / "stepup_app.exe").exists():
@@ -146,7 +146,7 @@ def package_installer(project_root, version_dir, version):
 
     # 复制安装程序
     installer_source = project_root / "build" / "installer" / f"StepUp_Setup_v{version}.exe"
-    installer_name = f"StepUp_Setup_v{version}.exe"
+    installer_name = f"StepUp_v{version}_windows_installer.exe"
 
     if installer_source.exists():
         shutil.copy2(installer_source, version_dir / installer_name)
