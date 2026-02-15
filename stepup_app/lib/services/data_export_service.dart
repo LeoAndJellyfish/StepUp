@@ -10,6 +10,7 @@ import '../models/level.dart';
 import '../models/tag.dart';
 import '../models/user.dart';
 import '../models/file_attachment.dart';
+import '../models/classification_scheme.dart';
 import 'assessment_item_dao.dart';
 import 'category_dao.dart';
 import 'subcategory_dao.dart';
@@ -17,6 +18,7 @@ import 'level_dao.dart';
 import 'tag_dao.dart';
 import 'user_dao.dart';
 import 'file_attachment_dao.dart';
+import 'classification_scheme_dao.dart';
 import 'database_helper.dart';
 import 'event_bus.dart';
 import 'file_manager.dart';
@@ -38,6 +40,7 @@ class DataExportService {
   final TagDao _tagDao = TagDao();
   final UserDao _userDao = UserDao();
   final FileAttachmentDao _fileAttachmentDao = FileAttachmentDao();
+  final ClassificationSchemeDao _schemeDao = ClassificationSchemeDao();
   final EventBus _eventBus = EventBus();
   final FileManager _fileManager = FileManager();
 
@@ -55,8 +58,11 @@ class DataExportService {
 
     try {
       // 1. 获取所有数据
-      progressCallback?.call(0.1, '正在获取用户数据...');
+      progressCallback?.call(0.05, '正在获取用户数据...');
       final users = await _userDao.getUsers();
+
+      progressCallback?.call(0.1, '正在获取分类方案数据...');
+      final schemes = await _schemeDao.getAllSchemes();
 
       progressCallback?.call(0.15, '正在获取分类数据...');
       final categories = await _categoryDao.getAllCategories();
@@ -188,10 +194,11 @@ class DataExportService {
         final exportData = {
           'metadata': {
             'exportedAt': DateTime.now().toIso8601String(),
-            'version': '1.1', // 更新版本号表示包含文件内容
+            'version': '1.2', // 更新版本号表示包含分类方案
             'includeFiles': includeFiles,
           },
           'users': users.map((user) => user.toMap()).toList(),
+          'schemes': schemes.map((scheme) => scheme.toMap()).toList(),
           'categories': categories.map((category) => category.toMap()).toList(),
           'subcategories': subcategories.map((subcategory) => subcategory.toMap()).toList(),
           'levels': levels.map((level) => level.toMap()).toList(),
@@ -331,7 +338,41 @@ class DataExportService {
         }
       }
 
-      // 5. 导入分类数据
+      // 5. 导入分类方案数据（在分类数据之前导入）
+      progressCallback?.call(0.22, '正在导入分类方案数据...', isError: false);
+      if (importData.containsKey('schemes') && importData['schemes'] is List) {
+        final schemesData = importData['schemes'] as List;
+        for (final schemeData in schemesData) {
+          if (schemeData is Map<String, dynamic>) {
+            try {
+              final scheme = ClassificationScheme.fromMap(schemeData);
+              // 处理ID冲突：先查询是否存在相同ID的方案
+              if (scheme.id != null) {
+                final existingScheme = await _schemeDao.getSchemeById(scheme.id!);
+                if (existingScheme != null) {
+                  // 存在相同ID的方案，更新而不是插入
+                  await _schemeDao.updateScheme(scheme);
+                  debugPrint('更新现有分类方案: ${scheme.name} (ID: ${scheme.id})');
+                } else {
+                  // 不存在相同ID的方案，直接插入
+                  await _schemeDao.insertScheme(scheme);
+                  debugPrint('插入新分类方案: ${scheme.name} (ID: ${scheme.id})');
+                }
+              } else {
+                // 没有指定ID，直接插入
+                await _schemeDao.insertScheme(scheme);
+                debugPrint('插入新分类方案: ${scheme.name}');
+              }
+            } catch (e) {
+              debugPrint('导入分类方案数据失败: $e');
+              progressCallback?.call(0.22, '导入分类方案数据失败: ${e.toString()}', isError: true);
+              // 继续导入其他分类方案数据
+            }
+          }
+        }
+      }
+
+      // 6. 导入分类数据
       progressCallback?.call(0.25, '正在导入分类数据...', isError: false);
       if (importData.containsKey('categories') && importData['categories'] is List) {
         final categoriesData = importData['categories'] as List;
@@ -677,7 +718,7 @@ class DataExportService {
   /// 清空所有数据（用于替换导入）
   Future<void> _clearAllData() async {
     final db = await _databaseHelper.database;
-    
+
     // 按依赖关系顺序删除数据
     await db.delete('assessment_item_tags');
     await db.delete('file_attachments');
@@ -686,12 +727,14 @@ class DataExportService {
     await db.delete('levels');
     await db.delete('tags');
     await db.delete('categories');
+    await db.delete('classification_schemes');
     // 注意：保留用户数据，除非明确指定要删除
   }
 
   /// 获取导出统计信息
   Future<Map<String, int>> getExportStatistics() async {
     final users = await _userDao.getUsers();
+    final schemes = await _schemeDao.getAllSchemes();
     final categories = await _categoryDao.getAllCategories();
     final subcategories = await _subcategoryDao.getAllSubcategories();
     final levels = await _levelDao.getAllLevels();
@@ -701,6 +744,7 @@ class DataExportService {
 
     return {
       'users': users.length,
+      'schemes': schemes.length,
       'categories': categories.length,
       'subcategories': subcategories.length,
       'levels': levels.length,

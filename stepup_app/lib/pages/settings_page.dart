@@ -143,6 +143,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   const Text('导出统计信息：'),
                   const SizedBox(height: 8),
                   Text('用户: ${stats['users']} 个'),
+                  Text('分类方案: ${stats['schemes']} 个'),
                   Text('分类: ${stats['categories']} 个'),
                   Text('子分类: ${stats['subcategories']} 个'),
                   Text('级别: ${stats['levels']} 个'),
