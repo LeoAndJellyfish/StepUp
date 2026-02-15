@@ -12,6 +12,11 @@ import re
 import subprocess
 from pathlib import Path
 
+# 代理配置 - 用于下载 sqlite3 等原生库
+# 如果你有代理，请取消下面两行的注释并修改为你的代理地址
+PROXY_URL = "http://127.0.0.1:7890"  # 修改为你的代理地址和端口
+# PROXY_URL = None  # 如果没有代理，使用这行
+
 
 def print_header(title):
     print("=" * 50)
@@ -24,12 +29,13 @@ def print_step(step, total, message):
     print(f"[{step}/{total}] {message}...")
 
 
-def run_command(cmd, cwd=None):
+def run_command(cmd, cwd=None, env=None):
     """运行命令并返回结果"""
     result = subprocess.run(
         cmd, shell=True, cwd=cwd,
         capture_output=True, text=True,
-        encoding='utf-8', errors='ignore'
+        encoding='utf-8', errors='ignore',
+        env=env
     )
     if result.returncode != 0:
         print(f"[错误] 命令执行失败: {cmd}")
@@ -37,6 +43,24 @@ def run_command(cmd, cwd=None):
             print(result.stderr)
         return False
     return True
+
+
+def get_proxy_env():
+    """获取包含代理设置的环境变量"""
+    env = os.environ.copy()
+    
+    # Flutter 国内镜像
+    env["FLUTTER_STORAGE_BASE_URL"] = "https://storage.flutter-io.cn"
+    env["PUB_HOSTED_URL"] = "https://pub.flutter-io.cn"
+    
+    # HTTP/HTTPS 代理（用于下载 sqlite3 等原生库）
+    if PROXY_URL:
+        env["HTTP_PROXY"] = PROXY_URL
+        env["HTTPS_PROXY"] = PROXY_URL
+        env["http_proxy"] = PROXY_URL
+        env["https_proxy"] = PROXY_URL
+    
+    return env
 
 
 def validate_version(version):
@@ -103,7 +127,8 @@ def main():
 
     # 步骤 3: 获取依赖
     print_step(3, 5, "获取依赖")
-    if not run_command("flutter pub get"):
+    env = get_proxy_env()
+    if not run_command("flutter pub get", env=env):
         input("\n按回车键退出...")
         sys.exit(1)
     print("      依赖获取完成")
@@ -111,7 +136,8 @@ def main():
 
     # 步骤 4: 构建 Windows
     print_step(4, 5, "构建 Windows 应用")
-    if not run_command("flutter build windows --release"):
+    env = get_proxy_env()
+    if not run_command("flutter build windows --release", env=env):
         input("\n按回车键退出...")
         sys.exit(1)
     print("      Windows 构建完成")
@@ -119,12 +145,10 @@ def main():
 
     # 步骤 5: 构建 Android
     print_step(5, 5, "构建 Android 应用")
-    # 临时使用国内镜像加速下载
-    env = os.environ.copy()
-    # Flutter 相关镜像
-    env["FLUTTER_STORAGE_BASE_URL"] = "https://storage.flutter-io.cn"
-    env["PUB_HOSTED_URL"] = "https://pub.flutter-io.cn"
-
+    env = get_proxy_env()
+    if PROXY_URL:
+        print(f"      使用代理: {PROXY_URL}")
+    
     result = subprocess.run(
         "flutter build apk --release",
         shell=True,
