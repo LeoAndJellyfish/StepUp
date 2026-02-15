@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/services.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'dart:io';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -13,6 +14,9 @@ import 'providers/theme_provider.dart';
 void main() async {
   // 确保Flutter绑定初始化
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化pdfrx
+  pdfrxFlutterInitialize();
   
   // 在桌面平台上初始化FFI数据库
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -58,7 +62,6 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<DatabaseHelper>(
           create: (context) => DatabaseHelper(),
-          dispose: (context, db) => db.close(),
         ),
         Provider<UserDao>(
           create: (context) => UserDao(),
@@ -71,16 +74,8 @@ class MyApp extends StatelessWidget {
         builder: (context, themeProvider, child) {
           return MaterialApp.router(
             title: 'StepUp 综合测评系统',
-            theme: AppTheme.lightTheme.copyWith(
-              textTheme: AppTheme.lightTheme.textTheme.apply(
-                fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
-              ),
-            ),
-            darkTheme: AppTheme.darkTheme.copyWith(
-              textTheme: AppTheme.darkTheme.textTheme.apply(
-                fontFamilyFallback: ['PingFang SC', 'Microsoft YaHei', 'SimHei', 'Arial Unicode MS'],
-              ),
-            ),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.materialThemeMode,
             routerConfig: AppRouter.router,
             debugShowCheckedModeBanner: false,

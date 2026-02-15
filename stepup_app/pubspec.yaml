@@ -69,7 +69,7 @@ dependencies:
   url_launcher: ^6.2.2
   
   # 文件压缩
-  archive: ^3.4.9
+  archive: ^4.0.7
 
   # HTTP 请求
   http: ^1.1.0
@@ -85,6 +85,9 @@ dependencies:
 
   # 获取应用信息
   package_info_plus: ^8.0.0
+
+  # PDF文本提取
+  pdfrx: ^2.2.20
 
 dev_dependencies:
   flutter_test:
@@ -138,3 +141,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # HarmonyOS Sans 字体
+  fonts:
+    - family: HarmonyOS Sans SC
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Thin.ttf
+          weight: 100
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
+          weight: 300
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 700

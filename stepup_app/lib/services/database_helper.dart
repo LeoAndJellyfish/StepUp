@@ -21,14 +21,13 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // 创建用户表
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,20 +42,34 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建分类表（主维度）
+    await db.execute('''
+      CREATE TABLE classification_schemes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT NOT NULL UNIQUE,
+        description TEXT,
+        is_active INTEGER DEFAULT 0,
+        is_default INTEGER DEFAULT 0,
+        source TEXT DEFAULT 'manual',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        scheme_id INTEGER,
         name TEXT NOT NULL,
         code TEXT NOT NULL,
         description TEXT,
         color TEXT NOT NULL DEFAULT '#2196F3',
         icon TEXT NOT NULL DEFAULT 'category',
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (scheme_id) REFERENCES classification_schemes (id) ON DELETE CASCADE
       )
     ''');
 
-    // 创建子分类表
     await db.execute('''
       CREATE TABLE subcategories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +82,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建级别表
     await db.execute('''
       CREATE TABLE levels (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +92,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建标签表
     await db.execute('''
       CREATE TABLE tags (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +102,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建assessment_items表
     await db.execute('''
       CREATE TABLE assessment_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,7 +128,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建活动标签关联表
     await db.execute('''
       CREATE TABLE assessment_item_tags (
         assessment_item_id INTEGER NOT NULL,
@@ -129,7 +138,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建文件附件表
     await db.execute('''
       CREATE TABLE file_attachments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,7 +152,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建索引
     await db.execute('CREATE INDEX idx_file_attachments_assessment_item_id ON file_attachments(assessment_item_id)');
     await db.execute('CREATE INDEX idx_file_attachments_file_type ON file_attachments(file_type)');
     await db.execute('CREATE INDEX idx_assessment_items_category_id ON assessment_items(category_id)');
@@ -152,25 +159,17 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_assessment_items_level_id ON assessment_items(level_id)');
     await db.execute('CREATE INDEX idx_assessment_items_activity_date ON assessment_items(activity_date)');
     await db.execute('CREATE INDEX idx_subcategories_category_id ON subcategories(category_id)');
+    await db.execute('CREATE INDEX idx_categories_scheme_id ON categories(scheme_id)');
 
-    // 插入默认分类数据
-    await _insertDefaultCategories(db);
-    // 插入默认子分类数据
-    await _insertDefaultSubcategories(db);
-    // 插入默认级别数据
+    await _insertDefaultClassificationScheme(db);
     await _insertDefaultLevels(db);
-    // 插入默认标签数据
     await _insertDefaultTags(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // 从版本1升级到版本2：添加新的数据表结构
-      
-      // 添加code字段到categories表
       await db.execute('ALTER TABLE categories ADD COLUMN code TEXT NOT NULL DEFAULT ""');
       
-      // 创建子分类表
       await db.execute('''
         CREATE TABLE subcategories (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -183,7 +182,6 @@ class DatabaseHelper {
         )
       ''');
 
-      // 创建级别表
       await db.execute('''
         CREATE TABLE levels (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -194,7 +192,6 @@ class DatabaseHelper {
         )
       ''');
 
-      // 创建标签表
       await db.execute('''
         CREATE TABLE tags (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -205,7 +202,6 @@ class DatabaseHelper {
         )
       ''');
 
-      // 添加新字段到assessment_items表
       await db.execute('ALTER TABLE assessment_items ADD COLUMN subcategory_id INTEGER');
       await db.execute('ALTER TABLE assessment_items ADD COLUMN level_id INTEGER');
       await db.execute('ALTER TABLE assessment_items ADD COLUMN is_awarded INTEGER DEFAULT 0');
@@ -215,7 +211,6 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE assessment_items ADD COLUMN participant_count INTEGER DEFAULT 1');
       await db.execute('ALTER TABLE assessment_items ADD COLUMN remarks TEXT');
       
-      // 创建活动标签关联表
       await db.execute('''
         CREATE TABLE assessment_item_tags (
           assessment_item_id INTEGER NOT NULL,
@@ -226,12 +221,10 @@ class DatabaseHelper {
         )
       ''');
 
-      // 创建新的索引
       await db.execute('CREATE INDEX idx_assessment_items_subcategory_id ON assessment_items(subcategory_id)');
       await db.execute('CREATE INDEX idx_assessment_items_level_id ON assessment_items(level_id)');
       await db.execute('CREATE INDEX idx_subcategories_category_id ON subcategories(category_id)');
       
-      // 更新categories表的code字段
       await db.execute('UPDATE categories SET code = "01" WHERE name = "德育"');
       await db.execute('UPDATE categories SET code = "02" WHERE name = "智育"');
       await db.execute('UPDATE categories SET code = "03" WHERE name = "体育锻炼"');
@@ -240,23 +233,17 @@ class DatabaseHelper {
       await db.execute('UPDATE categories SET code = "06" WHERE name = "劳动实践"');
       await db.execute('UPDATE categories SET code = "07" WHERE name = "美育素养"');
       
-      // 插入默认子分类数据
       await _insertDefaultSubcategories(db);
-      // 插入默认级别数据
       await _insertDefaultLevels(db);
-      // 插入默认标签数据
       await _insertDefaultTags(db);
     }
     
     if (oldVersion < 3) {
-      // 从版本2升级到版本3：清理重复的标签
-      // 删除与表单字段重复的"获奖"和"代表集体"标签
       await db.delete('assessment_item_tags', where: 'tag_id IN (SELECT id FROM tags WHERE code IN ("AWARDED", "COLLECTIVE"))');
       await db.delete('tags', where: 'code IN ("AWARDED", "COLLECTIVE")');
     }
     
     if (oldVersion < 4) {
-      // 从版本3升级到版本4：添加文件附件表
       await db.execute('''
         CREATE TABLE file_attachments (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -271,68 +258,139 @@ class DatabaseHelper {
         )
       ''');
       
-      // 创建索引
       await db.execute('CREATE INDEX idx_file_attachments_assessment_item_id ON file_attachments(assessment_item_id)');
       await db.execute('CREATE INDEX idx_file_attachments_file_type ON file_attachments(file_type)');
     }
+    
+    if (oldVersion < 5) {
+      await db.delete('subcategories');
+      
+      await db.execute('UPDATE categories SET code = "DY", description = "包括思想政治、学习态度、道德品质、法纪观念、集体意识、生活修养等方面的评价，以及相关奖励与处罚" WHERE name = "德育"');
+      await db.execute('UPDATE categories SET code = "ZY", description = "主要考察学生专业学习成绩和人文素质培养情况" WHERE name = "智育"');
+      await db.execute('UPDATE categories SET name = "体质健康与锻炼", code = "TY", description = "考察学生日常体育锻炼、体质健康测试以及参与各级体育活动的表现" WHERE code = "03" OR name = "体育锻炼"');
+      await db.execute('UPDATE categories SET code = "XS", description = "考察学生的学术探究兴趣、科研创新能力，包括参与竞赛、项目、发表论文、获得专利等" WHERE name = "学术科研与创新"');
+      await db.execute('UPDATE categories SET code = "ZZ", description = "考察学生担任学生干部、参与组织管理工作的情况及业绩表现" WHERE name = "组织管理能力"');
+      await db.execute('UPDATE categories SET code = "LD", description = "考察学生的劳动观念、技能、社会实践、志愿服务、实习创业等实践活动的参与情况与成果" WHERE name = "劳动实践"');
+      await db.execute('UPDATE categories SET code = "MY", description = "考察学生参与文化艺术活动、培养艺术特长、发表文艺作品等方面的素养与成果" WHERE name = "美育素养"');
+      
+      await _insertDefaultSubcategories(db);
+    }
+
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE classification_schemes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          code TEXT NOT NULL UNIQUE,
+          description TEXT,
+          is_active INTEGER DEFAULT 0,
+          is_default INTEGER DEFAULT 0,
+          source TEXT DEFAULT 'manual',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('ALTER TABLE categories ADD COLUMN scheme_id INTEGER');
+      await db.execute('CREATE INDEX idx_categories_scheme_id ON categories(scheme_id)');
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      await db.insert('classification_schemes', {
+        'name': '默认分类方案',
+        'code': 'DEFAULT',
+        'description': '系统默认的综合测评分类方案',
+        'is_active': 1,
+        'is_default': 1,
+        'source': 'system',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final schemes = await db.query('classification_schemes', where: 'code = ?', whereArgs: ['DEFAULT']);
+      if (schemes.isNotEmpty) {
+        final schemeId = schemes.first['id'];
+        await db.execute('UPDATE categories SET scheme_id = ?', [schemeId]);
+      }
+    }
   }
 
-  Future<void> _insertDefaultCategories(Database db) async {
+  Future<void> _insertDefaultClassificationScheme(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
+    await db.insert('classification_schemes', {
+      'name': '默认分类方案',
+      'code': 'DEFAULT',
+      'description': '系统默认的综合测评分类方案',
+      'is_active': 1,
+      'is_default': 1,
+      'source': 'system',
+      'created_at': now,
+      'updated_at': now,
+    });
+
+    final schemes = await db.query('classification_schemes', where: 'code = ?', whereArgs: ['DEFAULT']);
+    final schemeId = schemes.first['id'] as int?;
+
     final defaultCategories = [
       {
+        'scheme_id': schemeId,
         'name': '德育',
-        'code': '01',
-        'description': '包括思想政治、道德品质、法纪观念、集体意识、生活修养等',
+        'code': 'DY',
+        'description': '包括思想政治、学习态度、道德品质、法纪观念、集体意识、生活修养等方面的评价，以及相关奖励与处罚',
         'color': '#E91E63',
         'icon': 'favorite',
         'created_at': now,
       },
       {
+        'scheme_id': schemeId,
         'name': '智育',
-        'code': '02',
-        'description': '学业成绩及人文素质培养情况',
+        'code': 'ZY',
+        'description': '主要考察学生专业学习成绩和人文素质培养情况',
         'color': '#2196F3',
         'icon': 'school',
         'created_at': now,
       },
       {
-        'name': '体育锻炼',
-        'code': '03',
-        'description': '包括体质测试、体育活动参与与获奖等',
+        'scheme_id': schemeId,
+        'name': '体质健康与锻炼',
+        'code': 'TY',
+        'description': '考察学生日常体育锻炼、体质健康测试以及参与各级体育活动的表现',
         'color': '#4CAF50',
         'icon': 'sports',
         'created_at': now,
       },
       {
+        'scheme_id': schemeId,
         'name': '学术科研与创新',
-        'code': '04',
-        'description': '包括竞赛、科研项目、论文发表、专利等',
+        'code': 'XS',
+        'description': '考察学生的学术探究兴趣、科研创新能力，包括参与竞赛、项目、发表论文、获得专利等',
         'color': '#9C27B0',
         'icon': 'lightbulb',
         'created_at': now,
       },
       {
+        'scheme_id': schemeId,
         'name': '组织管理能力',
-        'code': '05',
-        'description': '包括学生干部任职、重点工作参与等',
+        'code': 'ZZ',
+        'description': '考察学生担任学生干部、参与组织管理工作的情况及业绩表现',
         'color': '#FF5722',
         'icon': 'management',
         'created_at': now,
       },
       {
+        'scheme_id': schemeId,
         'name': '劳动实践',
-        'code': '06',
-        'description': '包括社会实践、志愿服务、实习、创业、劳动教育等',
+        'code': 'LD',
+        'description': '考察学生的劳动观念、技能、社会实践、志愿服务、实习创业等实践活动的参与情况与成果',
         'color': '#FF9800',
         'icon': 'volunteer_activism',
         'created_at': now,
       },
       {
+        'scheme_id': schemeId,
         'name': '美育素养',
-        'code': '07',
-        'description': '包括文艺类竞赛、发表作品、文化活动参与等',
+        'code': 'MY',
+        'description': '考察学生参与文化艺术活动、培养艺术特长、发表文艺作品等方面的素养与成果',
         'color': '#607D8B',
         'icon': 'palette',
         'created_at': now,
@@ -342,55 +400,115 @@ class DatabaseHelper {
     for (final category in defaultCategories) {
       await db.insert('categories', category);
     }
+
+    await _insertDefaultSubcategoriesWithScheme(db, schemeId);
+  }
+
+  Future<void> _insertDefaultSubcategoriesWithScheme(Database db, int? schemeId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    final categories = await db.query(
+      'categories',
+      where: schemeId != null ? 'scheme_id = ?' : 'scheme_id IS NULL',
+      whereArgs: schemeId != null ? [schemeId] : null,
+    );
+    final Map<String, int> categoryIdMap = {};
+    for (final cat in categories) {
+      categoryIdMap[cat['code'] as String] = cat['id'] as int;
+    }
+
+    final defaultSubcategories = [
+      if (categoryIdMap.containsKey('DY')) ...[
+        {'category_id': categoryIdMap['DY'], 'name': '思想政治', 'code': 'DY01', 'description': '思想政治表现评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '学习态度', 'code': 'DY02', 'description': '学习态度评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '道德品质', 'code': 'DY03', 'description': '道德品质评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '法纪观念', 'code': 'DY04', 'description': '法纪观念评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '集体意识', 'code': 'DY05', 'description': '集体意识评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '生活修养', 'code': 'DY06', 'description': '生活修养评价', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '德育奖励', 'code': 'DY07', 'description': '德育相关奖励加分', 'created_at': now},
+        {'category_id': categoryIdMap['DY'], 'name': '德育处罚', 'code': 'DY08', 'description': '德育相关处罚减分', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('ZY')) ...[
+        {'category_id': categoryIdMap['ZY'], 'name': '学习成绩', 'code': 'ZY01', 'description': '专业学习成绩', 'created_at': now},
+        {'category_id': categoryIdMap['ZY'], 'name': '人文素质培养', 'code': 'ZY02', 'description': '人文素质培养情况', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('TY')) ...[
+        {'category_id': categoryIdMap['TY'], 'name': '日常体育锻炼', 'code': 'TY01', 'description': '日常体育锻炼参与情况', 'created_at': now},
+        {'category_id': categoryIdMap['TY'], 'name': '体质健康测试', 'code': 'TY02', 'description': '体质健康测试成绩', 'created_at': now},
+        {'category_id': categoryIdMap['TY'], 'name': '体育活动参与与获奖', 'code': 'TY03', 'description': '参与各级体育活动及获奖情况', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('XS')) ...[
+        {'category_id': categoryIdMap['XS'], 'name': '基本科研素养', 'code': 'XS01', 'description': '基本科研素养评价', 'created_at': now},
+        {'category_id': categoryIdMap['XS'], 'name': '学科竞赛', 'code': 'XS02', 'description': '参与学科竞赛及获奖', 'created_at': now},
+        {'category_id': categoryIdMap['XS'], 'name': '科研与创新创业项目', 'code': 'XS03', 'description': '科研项目、大创项目等', 'created_at': now},
+        {'category_id': categoryIdMap['XS'], 'name': '发表学术文章', 'code': 'XS04', 'description': '学术论文发表', 'created_at': now},
+        {'category_id': categoryIdMap['XS'], 'name': '学术科研类荣誉称号', 'code': 'XS05', 'description': '学术科研相关荣誉称号', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('ZZ')) ...[
+        {'category_id': categoryIdMap['ZZ'], 'name': '基本职责履行', 'code': 'ZZ01', 'description': '学生干部基本职责履行', 'created_at': now},
+        {'category_id': categoryIdMap['ZZ'], 'name': '业绩能力考核', 'code': 'ZZ02', 'description': '工作业绩能力考核', 'created_at': now},
+        {'category_id': categoryIdMap['ZZ'], 'name': '组织管理类荣誉称号', 'code': 'ZZ03', 'description': '优秀干部等荣誉称号', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('LD')) ...[
+        {'category_id': categoryIdMap['LD'], 'name': '基本劳动与实践素养', 'code': 'LD01', 'description': '基本劳动与实践素养', 'created_at': now},
+        {'category_id': categoryIdMap['LD'], 'name': '社会实践报告与团队项目', 'code': 'LD02', 'description': '社会实践、团队项目', 'created_at': now},
+        {'category_id': categoryIdMap['LD'], 'name': '志愿服务', 'code': 'LD03', 'description': '志愿服务参与情况', 'created_at': now},
+        {'category_id': categoryIdMap['LD'], 'name': '实习与创业实践', 'code': 'LD04', 'description': '实习、创业实践', 'created_at': now},
+        {'category_id': categoryIdMap['LD'], 'name': '实践类先进个人', 'code': 'LD05', 'description': '实践类先进个人荣誉', 'created_at': now},
+        {'category_id': categoryIdMap['LD'], 'name': '劳动教育活动', 'code': 'LD06', 'description': '劳动教育活动参与', 'created_at': now},
+      ],
+      if (categoryIdMap.containsKey('MY')) ...[
+        {'category_id': categoryIdMap['MY'], 'name': '基本文化艺术素养', 'code': 'MY01', 'description': '基本文化艺术素养', 'created_at': now},
+        {'category_id': categoryIdMap['MY'], 'name': '文化艺术类竞赛', 'code': 'MY02', 'description': '文化艺术类竞赛参与及获奖', 'created_at': now},
+        {'category_id': categoryIdMap['MY'], 'name': '发表文艺作品', 'code': 'MY03', 'description': '文艺作品发表', 'created_at': now},
+      ],
+    ];
+
+    for (final subcategory in defaultSubcategories) {
+      await db.insert('subcategories', subcategory);
+    }
   }
 
   Future<void> _insertDefaultSubcategories(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
     final defaultSubcategories = [
-      // 德育子分类 (category_id: 1)
-      {'category_id': 1, 'name': '思想政治表现', 'code': 'D01', 'description': '入党申请、青马工程、团日活动等', 'created_at': now},
-      {'category_id': 1, 'name': '获得表扬与荣誉', 'code': 'D02', 'description': '通报表扬、校级/院级荣誉', 'created_at': now},
-      {'category_id': 1, 'name': '参加无偿献血', 'code': 'D03', 'description': '无偿献血/骨髃捐献等', 'created_at': now},
-      {'category_id': 1, 'name': '拾金不昧见义勇为', 'code': 'D04', 'description': '拾金不昧/见义勇为', 'created_at': now},
+      {'category_id': 1, 'name': '思想政治', 'code': 'DY01', 'description': '思想政治表现评价', 'created_at': now},
+      {'category_id': 1, 'name': '学习态度', 'code': 'DY02', 'description': '学习态度评价', 'created_at': now},
+      {'category_id': 1, 'name': '道德品质', 'code': 'DY03', 'description': '道德品质评价', 'created_at': now},
+      {'category_id': 1, 'name': '法纪观念', 'code': 'DY04', 'description': '法纪观念评价', 'created_at': now},
+      {'category_id': 1, 'name': '集体意识', 'code': 'DY05', 'description': '集体意识评价', 'created_at': now},
+      {'category_id': 1, 'name': '生活修养', 'code': 'DY06', 'description': '生活修养评价', 'created_at': now},
+      {'category_id': 1, 'name': '德育奖励', 'code': 'DY07', 'description': '德育相关奖励加分', 'created_at': now},
+      {'category_id': 1, 'name': '德育处罚', 'code': 'DY08', 'description': '德育相关处罚减分', 'created_at': now},
       
-      // 智育子分类 (category_id: 2)
-      {'category_id': 2, 'name': '通识课程修读', 'code': 'Z01', 'description': '需记录所选类别', 'created_at': now},
-      {'category_id': 2, 'name': '书籍阅读', 'code': 'Z02', 'description': '需提供读书笔记证明', 'created_at': now},
-      {'category_id': 2, 'name': '参加阅读活动', 'code': 'Z03', 'description': '参加读书会/书评会等阅读活动', 'created_at': now},
+      {'category_id': 2, 'name': '学习成绩', 'code': 'ZY01', 'description': '专业学习成绩', 'created_at': now},
+      {'category_id': 2, 'name': '人文素质培养', 'code': 'ZY02', 'description': '人文素质培养情况', 'created_at': now},
       
-      // 体育锻炼子分类 (category_id: 3)
-      {'category_id': 3, 'name': '日常体育锻炼', 'code': 'T01', 'description': '可自动计算分值', 'created_at': now},
-      {'category_id': 3, 'name': '体质健康测试成绩', 'code': 'T02', 'description': '体质健康测试成绩', 'created_at': now},
-      {'category_id': 3, 'name': '参加体育赛事', 'code': 'T03', 'description': '校级、院级体育赛事', 'created_at': now},
-      {'category_id': 3, 'name': '体育赛事获奖', 'code': 'T04', 'description': '体育赛事获奖', 'created_at': now},
+      {'category_id': 3, 'name': '日常体育锻炼', 'code': 'TY01', 'description': '日常体育锻炼参与情况', 'created_at': now},
+      {'category_id': 3, 'name': '体质健康测试', 'code': 'TY02', 'description': '体质健康测试成绩', 'created_at': now},
+      {'category_id': 3, 'name': '体育活动参与与获奖', 'code': 'TY03', 'description': '参与各级体育活动及获奖情况', 'created_at': now},
       
-      // 学术科研与创新子分类 (category_id: 4)
-      {'category_id': 4, 'name': '学科竞赛', 'code': 'X01', 'description': '如数学建模、数学竞赛、挑战杯', 'created_at': now},
-      {'category_id': 4, 'name': '学术科研项目', 'code': 'X02', 'description': '如大创、科研立项、结项', 'created_at': now},
-      {'category_id': 4, 'name': '学术论文发表', 'code': 'X03', 'description': '需注明期刊等级和作者顺序', 'created_at': now},
-      {'category_id': 4, 'name': '专利成果', 'code': 'X04', 'description': '发明、实用新型、外观设计', 'created_at': now},
-      {'category_id': 4, 'name': '学术荣誉', 'code': 'X05', 'description': '国家级、校级、院级优秀称号', 'created_at': now},
+      {'category_id': 4, 'name': '基本科研素养', 'code': 'XS01', 'description': '基本科研素养评价', 'created_at': now},
+      {'category_id': 4, 'name': '学科竞赛', 'code': 'XS02', 'description': '参与学科竞赛及获奖', 'created_at': now},
+      {'category_id': 4, 'name': '科研与创新创业项目', 'code': 'XS03', 'description': '科研项目、大创项目等', 'created_at': now},
+      {'category_id': 4, 'name': '发表学术文章', 'code': 'XS04', 'description': '学术论文发表', 'created_at': now},
+      {'category_id': 4, 'name': '学术科研类荣誉称号', 'code': 'XS05', 'description': '学术科研相关荣誉称号', 'created_at': now},
       
-      // 组织管理能力子分类 (category_id: 5)
-      {'category_id': 5, 'name': '担任学生干部', 'code': 'G01', 'description': '需区分校级、院级、班级', 'created_at': now},
-      {'category_id': 5, 'name': '工作业绩得分', 'code': 'G02', 'description': '由组织评定', 'created_at': now},
-      {'category_id': 5, 'name': '获得优秀干部荣誉', 'code': 'G03', 'description': '工作期间获得优秀干部等荣誉称号', 'created_at': now},
+      {'category_id': 5, 'name': '基本职责履行', 'code': 'ZZ01', 'description': '学生干部基本职责履行', 'created_at': now},
+      {'category_id': 5, 'name': '业绩能力考核', 'code': 'ZZ02', 'description': '工作业绩能力考核', 'created_at': now},
+      {'category_id': 5, 'name': '组织管理类荣誉称号', 'code': 'ZZ03', 'description': '优秀干部等荣誉称号', 'created_at': now},
       
-      // 劳动实践子分类 (category_id: 6)
-      {'category_id': 6, 'name': '社会实践', 'code': 'L01', 'description': '需记录团队/个人、是否立项、是否获奖', 'created_at': now},
-      {'category_id': 6, 'name': '志愿服务', 'code': 'L02', 'description': '需记录时长、单位、活动类型', 'created_at': now},
-      {'category_id': 6, 'name': '实习实践', 'code': 'L03', 'description': '需单位证明、岗位、时间', 'created_at': now},
-      {'category_id': 6, 'name': '创业实践', 'code': 'L04', 'description': '需项目立项或成果证明', 'created_at': now},
-      {'category_id': 6, 'name': '公益活动参与', 'code': 'L05', 'description': '如酵素制作、劳动教育课程等', 'created_at': now},
-      {'category_id': 6, 'name': '志愿服务荣誉', 'code': 'L06', 'description': '如优秀志愿者', 'created_at': now},
+      {'category_id': 6, 'name': '基本劳动与实践素养', 'code': 'LD01', 'description': '基本劳动与实践素养', 'created_at': now},
+      {'category_id': 6, 'name': '社会实践报告与团队项目', 'code': 'LD02', 'description': '社会实践、团队项目', 'created_at': now},
+      {'category_id': 6, 'name': '志愿服务', 'code': 'LD03', 'description': '志愿服务参与情况', 'created_at': now},
+      {'category_id': 6, 'name': '实习与创业实践', 'code': 'LD04', 'description': '实习、创业实践', 'created_at': now},
+      {'category_id': 6, 'name': '实践类先进个人', 'code': 'LD05', 'description': '实践类先进个人荣誉', 'created_at': now},
+      {'category_id': 6, 'name': '劳动教育活动', 'code': 'LD06', 'description': '劳动教育活动参与', 'created_at': now},
       
-      // 美育素养子分类 (category_id: 7)
-      {'category_id': 7, 'name': '文化艺术类竞赛', 'code': 'M01', 'description': '如演讲、辩论、书法、摄影、舞蹈等', 'created_at': now},
-      {'category_id': 7, 'name': '文化艺术类获奖', 'code': 'M02', 'description': '文化艺术类获奖', 'created_at': now},
-      {'category_id': 7, 'name': '文学艺术类作品发表', 'code': 'M03', 'description': '文学艺术类作品发表', 'created_at': now},
-      {'category_id': 7, 'name': '文化活动参与', 'code': 'M04', 'description': '如晚会、文化艺术社团', 'created_at': now},
-      {'category_id': 7, 'name': '公共场合艺术展示', 'code': 'M05', 'description': '如个人画展、摄影展等', 'created_at': now},
+      {'category_id': 7, 'name': '基本文化艺术素养', 'code': 'MY01', 'description': '基本文化艺术素养', 'created_at': now},
+      {'category_id': 7, 'name': '文化艺术类竞赛', 'code': 'MY02', 'description': '文化艺术类竞赛参与及获奖', 'created_at': now},
+      {'category_id': 7, 'name': '发表文艺作品', 'code': 'MY03', 'description': '文艺作品发表', 'created_at': now},
     ];
 
     for (final subcategory in defaultSubcategories) {
@@ -419,31 +537,15 @@ class DatabaseHelper {
     final now = DateTime.now().millisecondsSinceEpoch;
     
     final defaultTags = [
-      // 移除了重复的"代表集体"和"获奖"标签，这些信息已在表单字段中体现
-      {'name': '自评', 'code': 'SELF_EVAL', 'description': '该活动需学生自评后由评议小组核定', 'created_at': now},
-      {'name': '需证明', 'code': 'NEED_PROOF', 'description': '活动加分需要上传证明材料', 'created_at': now},
-      {'name': '时长积分', 'code': 'TIME_BASED', 'description': '以参与时长计分', 'created_at': now},
-      {'name': '一次记分', 'code': 'ONE_TIME', 'description': '同一事项取高不累加', 'created_at': now},
-      {'name': '多人参与', 'code': 'TEAM_PROJECT', 'description': '团体项目，需区分负责人与成员得分', 'created_at': now},
+      {'name': '竞赛', 'code': 'COMPETITION', 'description': '各类竞赛活动', 'created_at': now},
+      {'name': '项目', 'code': 'PROJECT', 'description': '各类项目参与', 'created_at': now},
+      {'name': '志愿服务', 'code': 'VOLUNTEER', 'description': '志愿服务活动', 'created_at': now},
+      {'name': '学生工作', 'code': 'STUDENT_WORK', 'description': '学生干部工作', 'created_at': now},
+      {'name': '科研', 'code': 'RESEARCH', 'description': '科研活动', 'created_at': now},
     ];
 
     for (final tag in defaultTags) {
       await db.insert('tags', tag);
     }
-  }
-
-  // 关闭数据库
-  Future<void> close() async {
-    final db = await database;
-    await db.close();
-    _database = null;
-  }
-
-  // 清空数据库（用于测试）
-  Future<void> deleteDatabase() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'stepup.db');
-    await databaseFactory.deleteDatabase(path);
-    _database = null;
   }
 }

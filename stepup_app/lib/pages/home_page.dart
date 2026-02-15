@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
+import '../models/category.dart';
 import '../services/assessment_item_dao.dart';
+import '../services/category_dao.dart';
+import '../services/classification_scheme_dao.dart';
 import '../services/event_bus.dart';
 import '../services/user_dao.dart';
 import 'dart:math' as math;
@@ -17,6 +20,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with TickerProviderStateMixin {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
+  final CategoryDao _categoryDao = CategoryDao();
+  final ClassificationSchemeDao _schemeDao = ClassificationSchemeDao();
   final EventBus _eventBus = EventBus();
   final UserDao _userDao = UserDao();
 
@@ -44,6 +49,7 @@ class _HomePageState extends State<HomePage>
     _loadStatistics();
     _loadUserName();
     _eventBus.on(AppEvent.assessmentItemChanged, _loadStatistics);
+    _eventBus.on(AppEvent.schemeChanged, _loadStatistics);
   }
 
   Future<void> _loadUserName() async {
@@ -62,6 +68,7 @@ class _HomePageState extends State<HomePage>
   @override
   void dispose() {
     _eventBus.off(AppEvent.assessmentItemChanged, _loadStatistics);
+    _eventBus.off(AppEvent.schemeChanged, _loadStatistics);
     _mainAnimationController.dispose();
     super.dispose();
   }
@@ -73,7 +80,24 @@ class _HomePageState extends State<HomePage>
         _error = null;
       });
 
-      final stats = await _assessmentItemDao.getStatistics();
+      // 获取当前激活的方案
+      final activeScheme = await _schemeDao.getActiveScheme();
+
+      // 根据当前方案获取分类
+      List<Category> categories;
+      if (activeScheme != null) {
+        categories = await _categoryDao.getCategoriesBySchemeId(activeScheme.id!);
+      } else {
+        categories = await _categoryDao.getAllCategories();
+      }
+
+      // 获取当前方案下的分类ID列表
+      final categoryIds = categories.map((c) => c.id).whereType<int>().toList();
+
+      // 加载统计（只统计当前方案下的条目）
+      final stats = categoryIds.isEmpty
+          ? {'totalCount': 0, 'totalDuration': 0.0, 'awardedCount': 0, 'categoryStats': <Map<String, dynamic>>[]}
+          : await _assessmentItemDao.getStatistics(categoryIds: categoryIds);
 
       setState(() {
         _statistics = stats;

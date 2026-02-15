@@ -13,13 +13,15 @@ import '../pages/user_onboarding_page.dart';
 import '../pages/first_time_welcome_page.dart';
 import '../pages/user_profile_edit_page.dart';
 import '../pages/nutstore_backup_page.dart';
+import '../pages/document_analysis_page.dart';
+import '../pages/classification_schemes_page.dart';
+import '../pages/classification_scheme_detail_page.dart';
+import '../pages/classification_scheme_create_page.dart';
 import '../models/category.dart';
 
 class AppRouter {
-  // 初始路由，默认是首页
   static String _initialLocation = '/home';
   
-  // 设置初始路由
   static void setInitialRoute(String route) {
     _initialLocation = route;
   }
@@ -27,31 +29,26 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: _initialLocation,
     routes: [
-      // 用户引导页面（独立页面）
   GoRoute(
     path: '/onboarding',
     name: 'onboarding',
     builder: (context, state) => const UserOnboardingPage(),
   ),
-  // 首次欢迎页面（简化版）
   GoRoute(
     path: '/welcome',
     name: 'welcome',
     builder: (context, state) => const FirstTimeWelcomePage(),
   ),
-  // 用户信息编辑页面
   GoRoute(
     path: '/profile/edit',
     name: 'profile-edit',
     builder: (context, state) => const UserProfileEditPage(),
   ),
-      // 底部导航栏的主要页面
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return MainNavigationPage(navigationShell: navigationShell);
         },
         branches: [
-          // 首页分支
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -61,7 +58,6 @@ class AppRouter {
               ),
             ],
           ),
-          // 综测条目分支
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -86,7 +82,6 @@ class AppRouter {
               ),
             ],
           ),
-          // 统计分支
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -96,7 +91,6 @@ class AppRouter {
               ),
             ],
           ),
-          // 分类管理分支
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -133,21 +127,43 @@ class AppRouter {
           ),
         ],
       ),
-      // 设置页面（独立页面）
       GoRoute(
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsPage(),
         routes: [
-          // 坚果云备份页面
           GoRoute(
             path: 'nutstore-backup',
             name: 'nutstore-backup',
             builder: (context, state) => const NutstoreBackupPage(),
           ),
+          GoRoute(
+            path: 'document-analysis',
+            name: 'document-analysis',
+            builder: (context, state) => const DocumentAnalysisPage(),
+          ),
+          GoRoute(
+            path: 'schemes',
+            name: 'schemes',
+            builder: (context, state) => const ClassificationSchemesPage(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: 'scheme-create',
+                builder: (context, state) => const ClassificationSchemeCreatePage(),
+              ),
+              GoRoute(
+                path: 'detail/:id',
+                name: 'scheme-detail',
+                builder: (context, state) {
+                  final id = int.parse(state.pathParameters['id']!);
+                  return ClassificationSchemeDetailPage(schemeId: id);
+                },
+              ),
+            ],
+          ),
         ],
       ),
-      // 图片预览页面
       GoRoute(
         path: '/image-preview',
         name: 'image-preview',
@@ -177,7 +193,6 @@ class AppRouter {
           );
         },
       ),
-      // 文档预览页面
       GoRoute(
         path: '/document-preview',
         name: 'document-preview',
@@ -232,7 +247,6 @@ class AppRouter {
   );
 }
 
-// 主导航页面，包含底部导航栏
 class MainNavigationPage extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 

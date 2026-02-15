@@ -10,6 +10,7 @@ import '../services/assessment_item_dao.dart';
 import '../services/category_dao.dart';
 import '../services/subcategory_dao.dart';
 import '../services/level_dao.dart';
+import '../services/classification_scheme_dao.dart';
 import '../services/assessment_deletion_service.dart';
 import '../services/proof_materials_export_service.dart';
 import '../services/event_bus.dart';
@@ -28,6 +29,7 @@ class _AssessmentListPageState extends State<AssessmentListPage>
   final CategoryDao _categoryDao = CategoryDao();
   final SubcategoryDao _subcategoryDao = SubcategoryDao();
   final LevelDao _levelDao = LevelDao();
+  final ClassificationSchemeDao _schemeDao = ClassificationSchemeDao();
   final AssessmentItemDeletionService _deletionService =
       AssessmentItemDeletionService();
   final ProofMaterialsExportService _exportService =
@@ -41,6 +43,7 @@ class _AssessmentListPageState extends State<AssessmentListPage>
 
   bool _isLoading = true;
   String? _error;
+  String? _currentSchemeName;
 
   bool _isExporting = false;
   double _exportProgress = 0.0;
@@ -71,11 +74,18 @@ class _AssessmentListPageState extends State<AssessmentListPage>
     );
     _loadData();
     _eventBus.on(AppEvent.assessmentItemChanged, _loadData);
+    _eventBus.on(AppEvent.schemeChanged, _onSchemeChanged);
+  }
+
+  void _onSchemeChanged() {
+    debugPrint('AssessmentListPage: 收到方案切换事件，刷新数据');
+    _loadData();
   }
 
   @override
   void dispose() {
     _eventBus.off(AppEvent.assessmentItemChanged, _loadData);
+    _eventBus.off(AppEvent.schemeChanged, _onSchemeChanged);
     _listAnimationController.dispose();
     super.dispose();
   }
@@ -87,24 +97,57 @@ class _AssessmentListPageState extends State<AssessmentListPage>
         _error = null;
       });
 
-      final categories = await _categoryDao.getAllCategories();
+      // 获取当前激活的方案
+      final activeScheme = await _schemeDao.getActiveScheme();
+
+      // 根据当前方案获取分类
+      List<Category> categories;
+      if (activeScheme != null) {
+        categories = await _categoryDao.getCategoriesBySchemeId(activeScheme.id!);
+      } else {
+        categories = await _categoryDao.getAllCategories();
+      }
+
+      // 获取当前方案下的分类ID列表
+      final categoryIds = categories.map((c) => c.id).whereType<int>().toList();
+
+      // 检查当前选中的分类是否在新方案中，如果不在则清空选择
+      if (_selectedCategoryId != null && !categoryIds.contains(_selectedCategoryId)) {
+        _selectedCategoryId = null;
+        _selectedSubcategoryId = null;
+      }
+
       final levels = await _levelDao.getAllLevels();
+
+      // 记录当前方案名称用于显示
+      final schemeName = activeScheme?.name;
 
       List<Subcategory> subcategories = [];
       if (_selectedCategoryId != null) {
         subcategories =
             await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
-      } else {
-        subcategories = await _subcategoryDao.getAllSubcategories();
+      } else if (categories.isNotEmpty) {
+        // 只获取当前方案下分类的子分类
+        for (final category in categories) {
+          if (category.id != null) {
+            final subs = await _subcategoryDao.getSubcategoriesByCategoryId(category.id!);
+            subcategories.addAll(subs);
+          }
+        }
       }
 
-      final items = await _getFilteredItems();
+      // 获取当前方案下的条目
+      // 如果当前方案没有分类，则返回空列表
+      final items = categoryIds.isEmpty
+          ? <AssessmentItem>[]
+          : await _getFilteredItems(categoryIds: categoryIds);
 
       setState(() {
         _items = items;
         _categories = categories;
         _subcategories = subcategories;
         _levels = levels;
+        _currentSchemeName = schemeName;
         _isLoading = false;
       });
 
@@ -117,9 +160,19 @@ class _AssessmentListPageState extends State<AssessmentListPage>
     }
   }
 
-  Future<List<AssessmentItem>> _getFilteredItems() async {
+  Future<List<AssessmentItem>> _getFilteredItems({List<int>? categoryIds}) async {
+    // 如果选择了特定分类，检查它是否在当前方案的分类列表中
+    if (_selectedCategoryId != null) {
+      final isValidCategory = categoryIds?.contains(_selectedCategoryId) ?? true;
+      if (!isValidCategory) {
+        // 如果选择的分类不在当前方案中，返回空列表（会在 _loadData 中清空选择）
+        return [];
+      }
+    }
+
     return await _assessmentItemDao.getAllItems(
       categoryId: _selectedCategoryId,
+      categoryIds: _selectedCategoryId == null ? categoryIds : null,
       subcategoryId: _selectedSubcategoryId,
       levelId: _selectedLevelId,
       isAwarded: _isAwarded,
@@ -134,7 +187,20 @@ class _AssessmentListPageState extends State<AssessmentListPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('综测条目'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('综测条目'),
+            if (_currentSchemeName != null)
+              Text(
+                '方案: $_currentSchemeName',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+          ],
+        ),
         actions: [
           _AnimatedAppBarIcon(
             icon: Icons.download,

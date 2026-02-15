@@ -20,6 +20,7 @@ import '../services/assessment_deletion_service.dart';
 import '../services/event_bus.dart';
 import '../services/ai_classification_service.dart';
 import '../services/ai_config_service.dart';
+import '../services/classification_scheme_dao.dart';
 import '../widgets/common_widgets.dart';
 
 class AssessmentFormPage extends StatefulWidget {
@@ -86,7 +87,16 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
   
   Future<void> _loadData() async {
     try {
-      final categories = await _categoryDao.getAllCategories();
+      final schemeDao = ClassificationSchemeDao();
+      final activeScheme = await schemeDao.getActiveScheme();
+      
+      List<Category> categories;
+      if (activeScheme != null) {
+        categories = await _categoryDao.getCategoriesBySchemeId(activeScheme.id!);
+      } else {
+        categories = await _categoryDao.getAllCategories();
+      }
+      
       final levels = await _levelDao.getAllLevels();
       final tags = await _tagDao.getAllTags();
       
@@ -120,8 +130,17 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
             // 注意：编辑模式下的现有文件不加入未保存列表
           }
           
-          // 如果有选中的分类，加载对应的子分类
+          // 如果条目的分类不在当前方案中，添加它（用于显示）
           if (_selectedCategoryId != null) {
+            final categoryExists = categories.any((c) => c.id == _selectedCategoryId);
+            if (!categoryExists) {
+              final itemCategory = await _categoryDao.getCategoryById(_selectedCategoryId!);
+              if (itemCategory != null) {
+                categories = [...categories, itemCategory];
+              }
+            }
+            
+            // 加载子分类
             final subcategories = await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
             _subcategories = subcategories;
           }

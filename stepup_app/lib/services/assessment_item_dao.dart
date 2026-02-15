@@ -15,6 +15,7 @@ class AssessmentItemDao {
     DateTime? startDate,
     DateTime? endDate,
     String orderBy = 'created_at DESC',
+    List<int>? categoryIds,
   }) async {
     final db = await _databaseHelper.database;
     
@@ -24,6 +25,11 @@ class AssessmentItemDao {
     if (categoryId != null) {
       whereClauses.add('category_id = ?');
       whereArgs.add(categoryId);
+    } else if (categoryIds != null && categoryIds.isNotEmpty) {
+      // 只有在没有指定单个 categoryId 时才使用 categoryIds
+      final placeholders = List.filled(categoryIds.length, '?').join(',');
+      whereClauses.add('category_id IN ($placeholders)');
+      whereArgs.addAll(categoryIds);
     }
 
     if (subcategoryId != null) {
@@ -149,15 +155,22 @@ class AssessmentItemDao {
     int? categoryId,
     DateTime? startDate,
     DateTime? endDate,
+    List<int>? categoryIds,
   }) async {
     final db = await _databaseHelper.database;
-    
+
     List<String> whereClauses = [];
     List<dynamic> whereArgs = [];
 
     if (categoryId != null) {
       whereClauses.add('category_id = ?');
       whereArgs.add(categoryId);
+    }
+
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      final placeholders = List.filled(categoryIds.length, '?').join(',');
+      whereClauses.add('category_id IN ($placeholders)');
+      whereArgs.addAll(categoryIds);
     }
 
     if (startDate != null) {
@@ -185,6 +198,12 @@ class AssessmentItemDao {
     // 获取各分类的统计
     List<String> categoryWhereClauses = [];
     List<dynamic> categoryWhereArgs = [];
+
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      final placeholders = List.filled(categoryIds.length, '?').join(',');
+      categoryWhereClauses.add('ai.category_id IN ($placeholders)');
+      categoryWhereArgs.addAll(categoryIds);
+    }
 
     if (startDate != null) {
       categoryWhereClauses.add('activity_date >= ?');

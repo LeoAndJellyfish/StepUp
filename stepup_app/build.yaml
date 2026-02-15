@@ -1,0 +1,5 @@
+targets:
+  $default:
+    builders:
+      pdfrx|pdfium_web_asset_builder:
+        enabled: false

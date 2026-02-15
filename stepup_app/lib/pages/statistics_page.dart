@@ -6,6 +6,7 @@ import '../models/level.dart';
 import '../services/assessment_item_dao.dart';
 import '../services/category_dao.dart';
 import '../services/level_dao.dart';
+import '../services/classification_scheme_dao.dart';
 import '../services/event_bus.dart';
 
 class StatisticsPage extends StatefulWidget {
@@ -19,22 +20,24 @@ class _StatisticsPageState extends State<StatisticsPage> {
   final AssessmentItemDao _assessmentItemDao = AssessmentItemDao();
   final CategoryDao _categoryDao = CategoryDao();
   final LevelDao _levelDao = LevelDao();
+  final ClassificationSchemeDao _schemeDao = ClassificationSchemeDao();
   final EventBus _eventBus = EventBus();
-  
+
   Map<String, dynamic>? _overallStats;
   List<Map<String, dynamic>> _categoryStats = [];
   List<Map<String, dynamic>> _levelStats = [];
-  
+
   bool _isLoading = true;
   String? _error;
-  
+
   @override
   void initState() {
     super.initState();
     _loadStatistics();
-    
+
     // 监听评估条目变更事件，自动刷新统计数据
     _eventBus.on(AppEvent.assessmentItemChanged, _loadStatistics);
+    _eventBus.on(AppEvent.schemeChanged, _loadStatistics);
   }
   
   Future<void> _loadStatistics() async {
@@ -43,14 +46,29 @@ class _StatisticsPageState extends State<StatisticsPage> {
         _isLoading = true;
         _error = null;
       });
-      
-      // 加载基础数据
-      final categories = await _categoryDao.getAllCategories();
+
+      // 获取当前激活的方案
+      final activeScheme = await _schemeDao.getActiveScheme();
+
+      // 根据当前方案获取分类
+      List<Category> categories;
+      if (activeScheme != null) {
+        categories = await _categoryDao.getCategoriesBySchemeId(activeScheme.id!);
+      } else {
+        categories = await _categoryDao.getAllCategories();
+      }
+
       final levels = await _levelDao.getAllLevels();
-      
-      // 加载综合统计
-      final overallStats = await _assessmentItemDao.getStatistics();
-      
+
+      // 获取当前方案下的分类ID列表
+      final categoryIds = categories.map((c) => c.id).whereType<int>().toList();
+
+      // 加载综合统计（只统计当前方案下的条目）
+      // 如果当前方案没有分类，则返回空统计
+      final overallStats = categoryIds.isEmpty
+          ? {'totalCount': 0, 'totalDuration': 0.0, 'awardedCount': 0, 'categoryStats': <Map<String, dynamic>>[]}
+          : await _assessmentItemDao.getStatistics(categoryIds: categoryIds);
+
       // 加载各分类统计
       List<Map<String, dynamic>> categoryStats = [];
       for (final category in categories) {
@@ -62,11 +80,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
           });
         }
       }
-      
-      // 统计各级别数据
+
+      // 统计各级别数据（只统计当前方案下的条目）
       List<Map<String, dynamic>> levelStats = [];
       for (final level in levels) {
-        final items = await _assessmentItemDao.getAllItems(levelId: level.id);
+        final items = await _assessmentItemDao.getAllItems(
+          levelId: level.id,
+          categoryIds: categoryIds,
+        );
         if (items.isNotEmpty) {
           final totalDuration = items.fold<double>(0, (sum, item) => sum + item.duration);
           levelStats.add({
@@ -77,7 +98,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           });
         }
       }
-      
+
       setState(() {
         _overallStats = overallStats;
         _categoryStats = categoryStats;
@@ -96,6 +117,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   void dispose() {
     // 移除事件监听器
     _eventBus.off(AppEvent.assessmentItemChanged, _loadStatistics);
+    _eventBus.off(AppEvent.schemeChanged, _loadStatistics);
     super.dispose();
   }
   

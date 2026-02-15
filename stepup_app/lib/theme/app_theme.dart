@@ -42,6 +42,7 @@ class AppTheme {
         fontWeight: FontWeight.w800,
         color: memphisBlack,
         letterSpacing: 1.2,
+        fontFamily: fontFamily,
       ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -73,6 +74,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           inherit: false,
+          fontFamily: fontFamily,
         ),
       ),
     ),
@@ -103,6 +105,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           inherit: false,
+          fontFamily: fontFamily,
         )),
       ),
     ),
@@ -118,6 +121,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.3,
           inherit: false,
+          fontFamily: fontFamily,
         ),
       ),
     ),
@@ -144,6 +148,7 @@ class AppTheme {
       labelStyle: const TextStyle(
         fontWeight: FontWeight.w600,
         color: memphisBlack,
+        fontFamily: fontFamily,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -155,10 +160,12 @@ class AppTheme {
       selectedLabelStyle: const TextStyle(
         fontWeight: FontWeight.w700,
         fontSize: 12,
+        fontFamily: fontFamily,
       ),
       unselectedLabelStyle: const TextStyle(
         fontWeight: FontWeight.w600,
         fontSize: 12,
+        fontFamily: fontFamily,
       ),
     ),
     dividerTheme: DividerThemeData(
@@ -180,6 +187,7 @@ class AppTheme {
       labelStyle: const TextStyle(
         fontWeight: FontWeight.w600,
         color: memphisBlack,
+        fontFamily: fontFamily,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -194,6 +202,7 @@ class AppTheme {
         color: Colors.white,
         fontWeight: FontWeight.w600,
         fontSize: 14,
+        fontFamily: fontFamily,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -217,6 +226,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           inherit: false,
+          fontFamily: fontFamily,
         ),
       ),
     ),
@@ -246,6 +256,7 @@ class AppTheme {
         fontWeight: FontWeight.w800,
         color: Colors.white,
         letterSpacing: 1.2,
+        fontFamily: fontFamily,
       ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -277,6 +288,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           inherit: false,
+          fontFamily: fontFamily,
         ),
       ),
     ),
@@ -307,6 +319,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
           inherit: false,
+          fontFamily: fontFamily,
         )),
       ),
     ),
@@ -322,6 +335,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.3,
           inherit: false,
+          fontFamily: fontFamily,
         ),
       ),
     ),
@@ -348,6 +362,7 @@ class AppTheme {
       labelStyle: const TextStyle(
         fontWeight: FontWeight.w600,
         color: Colors.white70,
+        fontFamily: fontFamily,
       ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
@@ -376,6 +391,7 @@ class AppTheme {
       labelStyle: const TextStyle(
         fontWeight: FontWeight.w600,
         color: Colors.white,
+        fontFamily: fontFamily,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -390,6 +406,7 @@ class AppTheme {
         color: Colors.white,
         fontWeight: FontWeight.w600,
         fontSize: 14,
+        fontFamily: fontFamily,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -539,6 +556,8 @@ class AppTheme {
     accentPurple,
   ];
 
+  static const String fontFamily = 'HarmonyOS Sans SC';
+
   static TextTheme _buildTextTheme(Brightness brightness) {
     final Color textColor = brightness == Brightness.light ? memphisBlack : Colors.white;
     
@@ -548,88 +567,103 @@ class AppTheme {
         fontWeight: FontWeight.w800,
         letterSpacing: -0.25,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       displayMedium: TextStyle(
         fontSize: 45,
         fontWeight: FontWeight.w800,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       displaySmall: TextStyle(
         fontSize: 36,
         fontWeight: FontWeight.w700,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.5,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       headlineMedium: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       headlineSmall: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       titleLarge: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.8,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.5,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       titleSmall: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.3,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.5,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       labelMedium: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       labelSmall: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.3,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       bodyLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.3,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.2,
         color: textColor,
+        fontFamily: fontFamily,
       ),
       bodySmall: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
         letterSpacing: 0.1,
         color: textColor,
+        fontFamily: fontFamily,
       ),
     );
   }

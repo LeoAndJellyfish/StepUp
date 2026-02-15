@@ -4,6 +4,8 @@ import '../widgets/common_widgets.dart';
 import '../theme/app_theme.dart';
 import '../models/category.dart';
 import '../services/category_dao.dart';
+import '../services/classification_scheme_dao.dart';
+import '../services/event_bus.dart';
 
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -14,14 +16,24 @@ class CategoriesPage extends StatefulWidget {
 
 class _CategoriesPageState extends State<CategoriesPage> {
   final CategoryDao _categoryDao = CategoryDao();
+  final ClassificationSchemeDao _schemeDao = ClassificationSchemeDao();
+  final EventBus _eventBus = EventBus();
   List<Category> _categories = [];
   bool _isLoading = true;
   String? _error;
+  String? _activeSchemeName;
 
   @override
   void initState() {
     super.initState();
     _loadCategories();
+    _eventBus.on(AppEvent.schemeChanged, _loadCategories);
+  }
+
+  @override
+  void dispose() {
+    _eventBus.off(AppEvent.schemeChanged, _loadCategories);
+    super.dispose();
   }
 
   Future<void> _loadCategories() async {
@@ -31,10 +43,18 @@ class _CategoriesPageState extends State<CategoriesPage> {
         _error = null;
       });
 
-      final categories = await _categoryDao.getAllCategories();
+      final activeScheme = await _schemeDao.getActiveScheme();
+      
+      List<Category> categories;
+      if (activeScheme != null) {
+        categories = await _categoryDao.getCategoriesBySchemeId(activeScheme.id!);
+      } else {
+        categories = await _categoryDao.getAllCategories();
+      }
       
       setState(() {
         _categories = categories;
+        _activeSchemeName = activeScheme?.name;
         _isLoading = false;
       });
     } catch (e) {
@@ -49,7 +69,27 @@ class _CategoriesPageState extends State<CategoriesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('分类管理'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('分类管理'),
+            if (_activeSchemeName != null)
+              Text(
+                '方案: $_activeSchemeName',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings/schemes'),
+            tooltip: '管理分类方案',
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadCategories,
@@ -80,36 +120,35 @@ class _CategoriesPageState extends State<CategoriesPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(AppTheme.spacing8),
-      itemCount: _categories.length,
-      itemBuilder: (context, index) {
-        final category = _categories[index];
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Color(
-                int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
-              ).withValues(alpha: 0.2),
-              child: Icon(
-                Icons.category,
-                color: Color(
-                  int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
+            padding: const EdgeInsets.all(AppTheme.spacing8),
+            itemCount: _categories.length,
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              return Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Color(
+                      int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
+                    ).withValues(alpha: 0.2),
+                    child: Icon(
+                      Icons.category,
+                      color: Color(
+                        int.parse(category.color.substring(1), radix: 16) + 0xFF000000,
+                      ),
+                    ),
+                  ),
+                  title: Text(category.name),
+                  subtitle: Text(category.description),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    context.push(
+                      '/categories/detail/${category.id}',
+                      extra: category,
+                    );
+                  },
                 ),
-              ),
-            ),
-            title: Text(category.name),
-            subtitle: Text(category.description),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              // 跳转到分类详情页面
-              context.push(
-                '/categories/detail/${category.id}',
-                extra: category,
               );
             },
-          ),
-        );
-      },
-    );
+          );
   }
 }

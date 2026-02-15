@@ -4,11 +4,35 @@ import 'database_helper.dart';
 class CategoryDao {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
-  // 获取所有分类
-  Future<List<Category>> getAllCategories() async {
+  Future<List<Category>> getAllCategories({int? schemeId}) async {
+    final db = await _databaseHelper.database;
+    List<Map<String, dynamic>> maps;
+    
+    if (schemeId != null) {
+      maps = await db.query(
+        'categories',
+        where: 'scheme_id = ?',
+        whereArgs: [schemeId],
+        orderBy: 'created_at ASC',
+      );
+    } else {
+      maps = await db.query(
+        'categories',
+        orderBy: 'created_at ASC',
+      );
+    }
+
+    return List.generate(maps.length, (i) {
+      return Category.fromMap(maps[i]);
+    });
+  }
+
+  Future<List<Category>> getCategoriesBySchemeId(int schemeId) async {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
       'categories',
+      where: 'scheme_id = ?',
+      whereArgs: [schemeId],
       orderBy: 'created_at ASC',
     );
 
@@ -17,7 +41,6 @@ class CategoryDao {
     });
   }
 
-  // 根据ID获取分类
   Future<Category?> getCategoryById(int id) async {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -33,14 +56,23 @@ class CategoryDao {
     return Category.fromMap(maps.first);
   }
 
-  // 根据名称获取分类
-  Future<Category?> getCategoryByName(String name) async {
+  Future<Category?> getCategoryByName(String name, {int? schemeId}) async {
     final db = await _databaseHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'categories',
-      where: 'name = ?',
-      whereArgs: [name],
-    );
+    List<Map<String, dynamic>> maps;
+    
+    if (schemeId != null) {
+      maps = await db.query(
+        'categories',
+        where: 'name = ? AND scheme_id = ?',
+        whereArgs: [name, schemeId],
+      );
+    } else {
+      maps = await db.query(
+        'categories',
+        where: 'name = ?',
+        whereArgs: [name],
+      );
+    }
 
     if (maps.isEmpty) {
       return null;
@@ -49,13 +81,36 @@ class CategoryDao {
     return Category.fromMap(maps.first);
   }
 
-  // 插入分类
+  Future<Category?> getCategoryByCode(String code, {int? schemeId}) async {
+    final db = await _databaseHelper.database;
+    List<Map<String, dynamic>> maps;
+    
+    if (schemeId != null) {
+      maps = await db.query(
+        'categories',
+        where: 'code = ? AND scheme_id = ?',
+        whereArgs: [code, schemeId],
+      );
+    } else {
+      maps = await db.query(
+        'categories',
+        where: 'code = ?',
+        whereArgs: [code],
+      );
+    }
+
+    if (maps.isEmpty) {
+      return null;
+    }
+
+    return Category.fromMap(maps.first);
+  }
+
   Future<int> insertCategory(Category category) async {
     final db = await _databaseHelper.database;
     return await db.insert('categories', category.toMap());
   }
 
-  // 更新分类
   Future<int> updateCategory(Category category) async {
     final db = await _databaseHelper.database;
     return await db.update(
@@ -66,7 +121,6 @@ class CategoryDao {
     );
   }
 
-  // 删除分类
   Future<int> deleteCategory(int id) async {
     final db = await _databaseHelper.database;
     return await db.delete(
@@ -76,7 +130,15 @@ class CategoryDao {
     );
   }
 
-  // 检查分类是否被使用
+  Future<int> deleteCategoriesBySchemeId(int schemeId) async {
+    final db = await _databaseHelper.database;
+    return await db.delete(
+      'categories',
+      where: 'scheme_id = ?',
+      whereArgs: [schemeId],
+    );
+  }
+
   Future<bool> isCategoryInUse(int categoryId) async {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> result = await db.query(
@@ -88,17 +150,14 @@ class CategoryDao {
     return result.isNotEmpty;
   }
 
-  // 获取分类统计信息
   Future<Map<String, dynamic>> getCategoryStats(int categoryId) async {
     final db = await _databaseHelper.database;
     
-    // 获取条目数量
     final List<Map<String, dynamic>> countResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM assessment_items WHERE category_id = ?',
       [categoryId],
     );
     
-    // 获取总时长
     final List<Map<String, dynamic>> durationResult = await db.rawQuery(
       'SELECT SUM(duration) as total_duration FROM assessment_items WHERE category_id = ?',
       [categoryId],
@@ -108,5 +167,14 @@ class CategoryDao {
       'count': countResult.first['count'] ?? 0,
       'totalDuration': durationResult.first['total_duration'] ?? 0.0,
     };
+  }
+
+  Future<int> getCategoryCount(int schemeId) async {
+    final db = await _databaseHelper.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM categories WHERE scheme_id = ?',
+      [schemeId],
+    );
+    return result.first['count'] as int;
   }
 }

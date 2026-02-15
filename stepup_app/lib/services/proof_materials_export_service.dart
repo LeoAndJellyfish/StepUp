@@ -277,9 +277,6 @@ class ProofMaterialsExportService {
 
     // 编码为ZIP
     final zipData = ZipEncoder().encode(archive);
-    if (zipData == null) {
-      throw Exception('创建ZIP文件失败');
-    }
 
     // 写入文件
     final outputFile = File(finalOutputPath);

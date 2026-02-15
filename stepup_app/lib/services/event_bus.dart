@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 enum AppEvent {
   assessmentItemChanged, // 条目数据变更
   categoryChanged,       // 分类数据变更
+  schemeChanged,         // 分类方案切换
 }
 
 // 简单的事件总线

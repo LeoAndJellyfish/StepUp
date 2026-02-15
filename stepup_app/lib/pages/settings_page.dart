@@ -610,6 +610,19 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
+          const Divider(),
+          const ListTile(
+            leading: Icon(Icons.account_tree),
+            title: Text('分类方案管理'),
+            subtitle: Text('管理和切换不同的分类标准'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.manage_accounts),
+            title: const Text('分类方案'),
+            subtitle: const Text('查看和管理分类方案'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => context.push('/settings/schemes'),
+          ),
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('关于应用'),
@@ -668,6 +681,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   : null,
             ),
             onTap: _showAIConfigDialog,
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.description,
+              color: _isAIConfigured ? AppTheme.primaryColor : Colors.grey,
+            ),
+            title: const Text('创建分类方案'),
+            subtitle: Text(
+              _isAIConfigured
+                  ? '上传综测文件自动识别分类体系'
+                  : '需先配置 AI 服务',
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              if (!_isAIConfigured) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('请先配置 AI 服务'),
+                    backgroundColor: Colors.orange,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
+              context.push('/settings/document-analysis');
+            },
           ),
           const Divider(),
           ListTile(
