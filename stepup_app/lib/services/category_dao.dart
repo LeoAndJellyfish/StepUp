@@ -1,5 +1,7 @@
 import '../models/category.dart';
 import 'database_helper.dart';
+import 'assessment_item_dao.dart';
+import 'subcategory_dao.dart';
 
 class CategoryDao {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
@@ -123,6 +125,21 @@ class CategoryDao {
 
   Future<int> deleteCategory(int id) async {
     final db = await _databaseHelper.database;
+
+    // 先清除所有引用该分类的条目的分类信息
+    final assessmentItemDao = AssessmentItemDao();
+    await assessmentItemDao.clearCategoryReference(id);
+
+    // 删除该分类下的所有子分类
+    final subcategoryDao = SubcategoryDao();
+    final subcategories = await subcategoryDao.getSubcategoriesByCategoryId(id);
+    for (final subcategory in subcategories) {
+      if (subcategory.id != null) {
+        await subcategoryDao.deleteSubcategory(subcategory.id!);
+      }
+    }
+
+    // 最后删除分类
     return await db.delete(
       'categories',
       where: 'id = ?',

@@ -131,18 +131,29 @@ class _AssessmentFormPageState extends State<AssessmentFormPage> {
           }
           
           // 如果条目的分类不在当前方案中，添加它（用于显示）
-          if (_selectedCategoryId != null) {
+          // 注意：categoryId为0表示该分类已被删除，条目变为未分类状态
+          if (_selectedCategoryId != null && _selectedCategoryId! > 0) {
             final categoryExists = categories.any((c) => c.id == _selectedCategoryId);
             if (!categoryExists) {
               final itemCategory = await _categoryDao.getCategoryById(_selectedCategoryId!);
               if (itemCategory != null) {
                 categories = [...categories, itemCategory];
+              } else {
+                // 分类已被删除，重置为未分类
+                _selectedCategoryId = null;
+                _selectedSubcategoryId = null;
               }
             }
-            
+
             // 加载子分类
-            final subcategories = await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
-            _subcategories = subcategories;
+            if (_selectedCategoryId != null) {
+              final subcategories = await _subcategoryDao.getSubcategoriesByCategoryId(_selectedCategoryId!);
+              _subcategories = subcategories;
+            }
+          } else if (_selectedCategoryId == 0) {
+            // categoryId为0表示分类已被删除，重置为null以便显示为"未选择"
+            _selectedCategoryId = null;
+            _selectedSubcategoryId = null;
           }
         }
       }

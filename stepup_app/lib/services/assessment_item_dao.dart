@@ -256,6 +256,35 @@ class AssessmentItemDao {
     });
   }
 
+  // 清除已删除分类的引用（将category_id设为0表示未分类）
+  Future<int> clearCategoryReference(int categoryId) async {
+    final db = await _databaseHelper.database;
+    return await db.update(
+      'assessment_items',
+      {
+        'category_id': 0,
+        'subcategory_id': null,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+    );
+  }
+
+  // 清除已删除子分类的引用
+  Future<int> clearSubcategoryReference(int subcategoryId) async {
+    final db = await _databaseHelper.database;
+    return await db.update(
+      'assessment_items',
+      {
+        'subcategory_id': null,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'subcategory_id = ?',
+      whereArgs: [subcategoryId],
+    );
+  }
+
   // 获取按月份分组的统计数据
   Future<List<Map<String, dynamic>>> getMonthlyStats(int year) async {
     final db = await _databaseHelper.database;
