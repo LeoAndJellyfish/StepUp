@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>应用需要访问文档文件夹来存储和读取证明材料文件</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>应用需要访问下载文件夹来导入导出数据</string>
 </dict>
 </plist>
