@@ -11,11 +11,17 @@ import os
 import re
 import subprocess
 from pathlib import Path
+import urllib.request
 
-# 代理配置 - 用于下载 sqlite3 等原生库
-# 如果你有代理，请取消下面两行的注释并修改为你的代理地址
-PROXY_URL = "http://127.0.0.1:7890"  # 修改为你的代理地址和端口
-# PROXY_URL = None  # 如果没有代理，使用这行
+# GitHub 镜像配置 - 用于下载 sqlite3 等原生库
+# 可用的 GitHub 镜像加速服务
+GITHUB_MIRRORS = [
+    "https://ghproxy.com/https://github.com",      # ghproxy
+    "https://mirror.ghproxy.com/https://github.com", # mirror.ghproxy
+    "https://gh.api.99988866.xyz/https://github.com", # 99988866
+    "https://gh.ddlc.top/https://github.com",      # ddlc
+    "https://ghps.cc/https://github.com",          # ghps
+]
 
 
 def print_header(title):
@@ -45,22 +51,87 @@ def run_command(cmd, cwd=None, env=None):
     return True
 
 
-def get_proxy_env():
-    """获取包含代理设置的环境变量"""
+def get_mirror_env():
+    """获取包含镜像设置的环境变量"""
     env = os.environ.copy()
     
     # Flutter 国内镜像
     env["FLUTTER_STORAGE_BASE_URL"] = "https://storage.flutter-io.cn"
     env["PUB_HOSTED_URL"] = "https://pub.flutter-io.cn"
     
-    # HTTP/HTTPS 代理（用于下载 sqlite3 等原生库）
-    if PROXY_URL:
-        env["HTTP_PROXY"] = PROXY_URL
-        env["HTTPS_PROXY"] = PROXY_URL
-        env["http_proxy"] = PROXY_URL
-        env["https_proxy"] = PROXY_URL
-    
     return env
+
+
+def download_with_mirror(url, output_path):
+    """使用镜像下载文件"""
+    # 尝试原始 URL
+    urls_to_try = [url]
+    
+    # 添加镜像 URL
+    for mirror in GITHUB_MIRRORS:
+        mirror_url = url.replace("https://github.com", mirror)
+        urls_to_try.append(mirror_url)
+    
+    for try_url in urls_to_try:
+        try:
+            print(f"      尝试下载: {try_url[:60]}...")
+            req = urllib.request.Request(
+                try_url,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=60) as response:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_path, 'wb') as f:
+                    f.write(response.read())
+            print(f"      下载成功: {output_path.name}")
+            return True
+        except Exception as e:
+            print(f"      失败: {str(e)[:50]}")
+            continue
+    
+    return False
+
+
+def prepare_sqlite3_libs(project_root):
+    """预下载 sqlite3 原生库到缓存目录"""
+    print("      预下载 sqlite3 原生库...")
+    
+    # sqlite3 版本
+    sqlite3_version = "3.1.5"
+    
+    # 需要下载的文件列表
+    libs = [
+        "libsqlite3.arm.android.so",
+        "libsqlite3.arm64.android.so",
+        "libsqlite3.x64.android.so",
+    ]
+    
+    # Pub 缓存目录
+    pub_cache = Path.home() / "AppData" / "Local" / "Pub" / "Cache" / "hosted" / "pub.flutter-io.cn" / f"sqlite3-{sqlite3_version}"
+    
+    if not pub_cache.exists():
+        print("      未找到 sqlite3 缓存目录，跳过预下载")
+        return True
+    
+    # 原生库输出目录
+    native_dir = pub_cache / "native"
+    native_dir.mkdir(exist_ok=True)
+    
+    success = True
+    for lib in libs:
+        output_path = native_dir / lib
+        if output_path.exists():
+            print(f"      已存在: {lib}")
+            continue
+        
+        url = f"https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-{sqlite3_version}/{lib}"
+        if not download_with_mirror(url, output_path):
+            print(f"      [警告] 无法下载: {lib}")
+            success = False
+    
+    return success
 
 
 def validate_version(version):
@@ -110,7 +181,7 @@ def main():
     print()
 
     # 步骤 1: 更新版本号
-    print_step(1, 5, "更新 pubspec.yaml 版本号")
+    print_step(1, 6, "更新 pubspec.yaml 版本号")
     if not update_pubspec_version(project_root, version):
         input("\n按回车键退出...")
         sys.exit(1)
@@ -118,36 +189,39 @@ def main():
     print()
 
     # 步骤 2: 清理构建缓存
-    print_step(2, 5, "清理构建缓存")
+    print_step(2, 6, "清理构建缓存")
     if not run_command("flutter clean"):
         input("\n按回车键退出...")
         sys.exit(1)
     print("      清理完成")
     print()
 
-    # 步骤 3: 获取依赖
-    print_step(3, 5, "获取依赖")
-    env = get_proxy_env()
+    # 步骤 3: 预下载 sqlite3 原生库
+    print_step(3, 6, "预下载 sqlite3 原生库")
+    prepare_sqlite3_libs(project_root)
+    print()
+
+    # 步骤 4: 获取依赖
+    print_step(4, 6, "获取依赖")
+    env = get_mirror_env()
     if not run_command("flutter pub get", env=env):
         input("\n按回车键退出...")
         sys.exit(1)
     print("      依赖获取完成")
     print()
 
-    # 步骤 4: 构建 Windows
-    print_step(4, 5, "构建 Windows 应用")
-    env = get_proxy_env()
+    # 步骤 5: 构建 Windows
+    print_step(5, 6, "构建 Windows 应用")
+    env = get_mirror_env()
     if not run_command("flutter build windows --release", env=env):
         input("\n按回车键退出...")
         sys.exit(1)
     print("      Windows 构建完成")
     print()
 
-    # 步骤 5: 构建 Android
-    print_step(5, 5, "构建 Android 应用")
-    env = get_proxy_env()
-    if PROXY_URL:
-        print(f"      使用代理: {PROXY_URL}")
+    # 步骤 6: 构建 Android
+    print_step(6, 6, "构建 Android 应用")
+    env = get_mirror_env()
     
     result = subprocess.run(
         "flutter build apk --release",

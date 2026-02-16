@@ -7,7 +7,6 @@ StepUp 一键构建打包脚本
 """
 
 import sys
-import os
 import re
 import subprocess
 from pathlib import Path
