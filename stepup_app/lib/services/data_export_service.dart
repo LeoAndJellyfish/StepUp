@@ -340,7 +340,37 @@ class DataExportService {
 
       // 5. 导入分类方案数据（在分类数据之前导入）
       progressCallback?.call(0.22, '正在导入分类方案数据...', isError: false);
-      if (importData.containsKey('schemes') && importData['schemes'] is List) {
+
+      // 检查是否是旧版本数据（没有schemes字段）
+      final bool isOldVersion = !importData.containsKey('schemes') ||
+          (importData['schemes'] as List?)?.isEmpty == true;
+
+      if (isOldVersion) {
+        // 旧版本数据：创建一个默认分类方案
+        debugPrint('检测到旧版本数据，创建默认分类方案...');
+        final now = DateTime.now();
+        final defaultScheme = ClassificationScheme(
+          name: '默认分类方案',
+          code: 'default',
+          description: '从旧版本数据自动创建的默认分类方案',
+          isActive: true,
+          isDefault: true,
+          source: 'imported',
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        // 检查是否已存在默认方案
+        final existingDefault = await _schemeDao.getDefaultScheme();
+        if (existingDefault == null) {
+          final schemeId = await _schemeDao.insertScheme(defaultScheme);
+          debugPrint('创建默认分类方案成功，ID: $schemeId');
+
+          // 激活该方案
+          await _schemeDao.setActiveScheme(schemeId);
+        }
+      } else {
+        // 新版本数据：正常导入分类方案
         final schemesData = importData['schemes'] as List;
         for (final schemeData in schemesData) {
           if (schemeData is Map<String, dynamic>) {
@@ -374,12 +404,28 @@ class DataExportService {
 
       // 6. 导入分类数据
       progressCallback?.call(0.25, '正在导入分类数据...', isError: false);
+
+      // 如果是旧版本数据，获取默认方案的ID用于关联分类
+      int? defaultSchemeId;
+      if (isOldVersion) {
+        final defaultScheme = await _schemeDao.getDefaultScheme();
+        defaultSchemeId = defaultScheme?.id;
+        debugPrint('旧版本数据导入，使用默认方案ID: $defaultSchemeId');
+      }
+
       if (importData.containsKey('categories') && importData['categories'] is List) {
         final categoriesData = importData['categories'] as List;
         for (final categoryData in categoriesData) {
           if (categoryData is Map<String, dynamic>) {
             try {
-              final category = app_models.Category.fromMap(categoryData);
+              var category = app_models.Category.fromMap(categoryData);
+
+              // 如果是旧版本数据且分类没有scheme_id，关联到默认方案
+              if (isOldVersion && category.schemeId == null && defaultSchemeId != null) {
+                category = category.copyWith(schemeId: defaultSchemeId);
+                debugPrint('为分类「${category.name}」设置默认方案ID: $defaultSchemeId');
+              }
+
               // 处理ID冲突：先查询是否存在相同ID的分类
               if (category.id != null) {
                 final existingCategory = await _categoryDao.getCategoryById(category.id!);
