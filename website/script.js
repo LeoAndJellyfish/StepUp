@@ -1,5 +1,11 @@
+// Version configuration - Update this when pubspec.yaml changes
+const APP_VERSION = '1.3.1';
+
 // Mobile Navigation
 document.addEventListener('DOMContentLoaded', function() {
+    // Update version display
+    updateVersionDisplay();
+
     const hamburger = document.querySelector('.hamburger');
     const navMenu = document.querySelector('.nav-menu');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -17,6 +23,20 @@ document.addEventListener('DOMContentLoaded', function() {
             navMenu.classList.remove('active');
         });
     });
+
+    // Update version display function
+    function updateVersionDisplay() {
+        const versionDisplay = document.getElementById('version-display');
+        const appVersions = document.querySelectorAll('.app-version');
+        
+        if (versionDisplay) {
+            versionDisplay.textContent = APP_VERSION;
+        }
+        
+        appVersions.forEach(el => {
+            el.textContent = '版本 ' + APP_VERSION;
+        });
+    }
 
     // Navbar scroll effect
     const navbar = document.querySelector('.navbar');

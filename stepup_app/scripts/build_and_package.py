@@ -7,6 +7,11 @@ StepUp 一键构建打包脚本
        python build_and_package.py 1.2.5 --platforms=macos
        python build_and_package.py 1.2.5 --platforms=windows,android,macos
        python build_and_package.py 1.2.5 --all-platforms
+
+功能:
+1. 构建应用（更新版本号、编译各平台）
+2. 打包应用（生成安装包）
+3. 同步版本号到网页
 """
 
 import sys
@@ -45,6 +50,33 @@ def run_script(script_name, version, platforms=None, all_platforms=False):
         cwd=script_dir.parent
     )
     return result.returncode == 0
+
+
+def sync_website_version(version):
+    """同步版本号到网页"""
+    script_dir = Path(__file__).parent.resolve()
+    project_root = script_dir.parent.parent
+    website_script = project_root / "website" / "update_version.py"
+
+    if not website_script.exists():
+        print(f"[警告] 网页同步脚本不存在: {website_script}")
+        return False
+
+    print("正在同步版本号到网页...")
+    result = subprocess.run(
+        [sys.executable, str(website_script)],
+        cwd=website_script.parent,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode == 0:
+        print("[成功] 网页版本号已同步")
+        return True
+    else:
+        print(f"[错误] 网页版本号同步失败: {version}")
+        print(result.stderr)
+        return False
 
 
 def parse_arguments():
@@ -110,12 +142,16 @@ def main():
         sys.exit(1)
 
     # 步骤 2: 打包
-    print_header("步骤 2/2: 打包")
+    print_header("步骤 2/3: 打包")
     if not run_script("package.py", version, args.platforms, args.all_platforms):
         print()
         print("[错误] 打包失败！")
         input("\n按回车键退出...")
         sys.exit(1)
+
+    # 步骤 3: 同步版本号到网页
+    print_header("步骤 3/3: 同步网页版本号")
+    sync_website_version(version)
 
     # 完成
     print_header("一键构建打包完成！")
