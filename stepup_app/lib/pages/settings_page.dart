@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/user_dao.dart';
 import '../services/data_export_service.dart';
 import '../services/ai_config_service.dart';
@@ -68,6 +69,25 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('加载用户名失败: $e');
     }
+  }
+
+  Future<void> _openWebsite() async {
+    final uri = Uri.parse('https://stepup.leojellyfish.cn');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      _showErrorSnackBar('无法打开官网链接');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _showThemeModeDialog(ThemeProvider themeProvider) {
@@ -628,6 +648,13 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: const Icon(Icons.info),
             title: const Text('关于应用'),
             subtitle: Text('StepUp 综合测评系统 v$_version'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text('官方网站'),
+            subtitle: const Text('访问 StepUp 官网'),
+            trailing: const Icon(Icons.open_in_new, size: 16),
+            onTap: () => _openWebsite(),
           ),
           // 数据备份与恢复部分
           const Divider(),
