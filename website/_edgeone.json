@@ -1,0 +1,27 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "file": "index.html"
+    },
+    {
+      "path": "/styles.css",
+      "file": "styles.css"
+    },
+    {
+      "path": "/script.js",
+      "file": "script.js"
+    }
+  ],
+  "headers": {
+    "/*": {
+      "Cache-Control": "public, max-age=3600"
+    },
+    "*.css": {
+      "Cache-Control": "public, max-age=86400"
+    },
+    "*.js": {
+      "Cache-Control": "public, max-age=86400"
+    }
+  }
+}

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StepUp - 让综测管理更简单</title>
+    <meta name="description" content="StepUp是一款专为大学生设计的综合测评管理系统，帮助您轻松记录、管理和统计各类综测活动。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span class="logo-text">StepUp</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="#features" class="nav-link">功能特性</a></li>
+                <li><a href="#download" class="nav-link">下载</a></li>
+                <li><a href="#tech" class="nav-link">技术栈</a></li>
+                <li><a href="https://gitee.com/LeoAndJellyfish/StepUp" target="_blank" class="nav-link">Gitee</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="badge-icon">🎓</span>
+                    <span>专为大学生打造</span>
+                </div>
+                <h1 class="hero-title">
+                    让综测管理
+                    <span class="gradient-text">更简单</span>
+                </h1>
+                <p class="hero-description">
+                    StepUp是一款专为中央财经大学（CUFE）学生设计的综合测评管理系统。
+                    清晰有序地管理您的综测条目，轻松记录、管理和统计各类综测活动。
+                </p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        立即下载
+                    </a>
+                    <a href="https://gitee.com/LeoAndJellyfish/StepUp" target="_blank" class="btn btn-secondary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.016 0zm6.09 5.333c.328 0 .593.266.592.593v1.482a.594.594 0 0 1-.593.592H9.777c-.982 0-1.778.796-1.778 1.778v5.63c0 .983.796 1.778 1.778 1.778h8.296c.327 0 .592.265.592.592v1.483a.593.593 0 0 1-.592.592H9.777c-2.186 0-3.958-1.771-3.958-3.958V8.296c0-2.186 1.772-3.958 3.958-3.958h8.297z"/>
+                        </svg>
+                        查看源码
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">1.3.1</span>
+                        <span class="stat-label">最新版本</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">Android</span>
+                        <span class="stat-label">支持平台</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">Windows</span>
+                        <span class="stat-label">支持平台</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="app-mockup">
+                    <div class="mockup-header">
+                        <div class="mockup-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="mockup-content">
+                        <div class="mockup-card">
+                            <div class="card-icon">📊</div>
+                            <div class="card-text">
+                                <div class="card-title">志愿活动</div>
+                                <div class="card-subtitle">时长: 12小时</div>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+                        <div class="mockup-card">
+                            <div class="card-icon">🏆</div>
+                            <div class="card-text">
+                                <div class="card-title">学术竞赛</div>
+                                <div class="card-subtitle">时长: 8小时</div>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+                        <div class="mockup-card">
+                            <div class="card-icon">📝</div>
+                            <div class="card-text">
+                                <div class="card-title">社会实践</div>
+                                <div class="card-subtitle">时长: 20小时</div>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+                        <div class="mockup-stats">
+                            <div class="stat-bar">
+                                <div class="bar-label">总计</div>
+                                <div class="bar-progress">
+                                    <div class="bar-fill" style="width: 75%"></div>
+                                </div>
+                                <div class="bar-value">40h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="floating-elements">
+                    <div class="float-card card-1">
+                        <span>✨</span>
+                        <span>AI评分</span>
+                    </div>
+                    <div class="float-card card-2">
+                        <span>📈</span>
+                        <span>数据统计</span>
+                    </div>
+                    <div class="float-card card-3">
+                        <span>☁️</span>
+                        <span>云端同步</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-bg">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="gradient-orb orb-3"></div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">功能特性</span>
+                <h2 class="section-title">全方位综测管理</h2>
+                <p class="section-description">
+                    从条目记录到数据统计，从文件管理到AI评分，StepUp为您提供完整的综测管理解决方案。
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 11l3 3L22 4"/>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">综测条目管理</h3>
+                    <p class="feature-description">
+                        智能添加活动信息，支持名称、日期、类型、时长、备注等完整录入。按活动类型自动分类，支持自定义分类和批量操作。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3v18h18"/>
+                            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">数据统计与可视化</h3>
+                    <p class="feature-description">
+                        自动计算各类别活动总时长，通过时间趋势图表展示活动参与情况，直观展示各类型活动分布比例。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                            <polyline points="13 2 13 9 20 9"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">文件管理</h3>
+                    <p class="feature-description">
+                        支持图片、文档等证明材料上传，内置文件查看器方便快速查阅，文件加密存储确保数据安全。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">数据导出</h3>
+                    <p class="feature-description">
+                        支持多种格式的数据导出和报表生成，完善的数据备份和恢复机制，让您的数据安全无忧。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 6.34L2.1 2.1m17.8 17.8l-4.24-4.24M6.34 17.66l-4.24 4.24M23 12h-6m-6 0H1m20.24-4.24l-4.24 4.24M6.34 6.34l-4.24-4.24"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">AI评分系统</h3>
+                    <p class="feature-description">
+                        AI根据评分标准自动计算分数，支持PDF、Word等格式的评分标准自动识别，智能分类计分。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">多平台支持</h3>
+                    <p class="feature-description">
+                        基于Flutter构建，支持Android、Windows等多个平台，随时随地管理您的综测数据。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">下载</span>
+                <h2 class="section-title">开始使用 StepUp</h2>
+                <p class="section-description">
+                    选择适合您设备的版本，立即下载体验。
+                </p>
+            </div>
+            <div class="download-grid">
+                <div class="download-card">
+                    <div class="download-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 0 0-.1521-.5676.416.416 0 0 0-.5676.1521l-2.0225 3.503C15.5902 8.4796 13.8532 8.136 12 8.136c-1.8532 0-3.5902.3436-5.1368.9649L4.8407 5.5978a.416.416 0 0 0-.5676-.1521.416.416 0 0 0-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589.3432 18.6617h23.3136c0-4.0028-2.3457-7.475-5.775-9.3403"/>
+                        </svg>
+                    </div>
+                    <h3 class="download-title">Android</h3>
+                    <p class="download-version">版本 1.3.1</p>
+                    <p class="download-description">
+                        支持 Android 5.0 及以上版本
+                    </p>
+                    <a href="https://gitee.com/LeoAndJellyfish/StepUp/releases" target="_blank" class="btn btn-download">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        下载 APK
+                    </a>
+                </div>
+                <div class="download-card">
+                    <div class="download-icon windows">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+                        </svg>
+                    </div>
+                    <h3 class="download-title">Windows</h3>
+                    <p class="download-version">版本 1.3.1</p>
+                    <p class="download-description">
+                        支持 Windows 10 及以上版本
+                    </p>
+                    <a href="https://gitee.com/LeoAndJellyfish/StepUp/releases" target="_blank" class="btn btn-download">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        下载安装包
+                    </a>
+                    <p class="download-note">
+                        需要 Microsoft Visual C++ Redistributable
+                    </p>
+                </div>
+                <div class="download-card source">
+                    <div class="download-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                    </div>
+                    <h3 class="download-title">源代码</h3>
+                    <p class="download-version">Gitee 仓库</p>
+                    <p class="download-description">
+                        基于 Flutter 3.9.0+ 开发
+                    </p>
+                    <a href="https://gitee.com/LeoAndJellyfish/StepUp" target="_blank" class="btn btn-download secondary">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.016 0zm6.09 5.333c.328 0 .593.266.592.593v1.482a.594.594 0 0 1-.593.592H9.777c-.982 0-1.778.796-1.778 1.778v5.63c0 .983.796 1.778 1.778 1.778h8.296c.327 0 .592.265.592.592v1.483a.593.593 0 0 1-.592.592H9.777c-2.186 0-3.958-1.771-3.958-3.958V8.296c0-2.186 1.772-3.958 3.958-3.958h8.297z"/>
+                        </svg>
+                        访问仓库
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section id="tech" class="tech">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">技术栈</span>
+                <h2 class="section-title">现代技术构建</h2>
+                <p class="section-description">
+                    StepUp 采用业界领先的技术栈，确保应用的性能和稳定性。
+                </p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14.314 0L2.3 12 6 15.7 18 3.7 14.314 0zm.014 11.2L8.6 16.9l5.728 5.7 5.715-5.7-5.728-5.7zm-.028 5.7l-5.7 5.7 5.7 5.7 5.7-5.7-5.7-5.7z"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">Flutter</span>
+                    <span class="tech-version">3.9.0+</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.98-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466l1.823 1.447zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952l1.448.327s0 .84-1.168.84l-3.22.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933l3.22-.187zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">Dart</span>
+                    <span class="tech-version">3.9.0+</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 6.628 5.373 12 12 12 6.628 0 12-5.372 12-12 0-6.627-5.372-12-12-12zm0 2.557A9.433 9.433 0 0 1 21.443 12 9.433 9.433 0 0 1 12 21.443 9.433 9.433 0 0 1 2.557 12 9.433 9.433 0 0 1 12 2.557zm.176 4.467a.838.838 0 0 0-.836.836v4.025l-3.602 2.082a.838.838 0 1 0 .838 1.45l3.928-2.27a.838.838 0 0 0 .418-.724V7.86a.838.838 0 0 0-.746-.836z"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">SQLite</span>
+                    <span class="tech-version">sqflite</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm0 2.2c5.4 0 9.8 4.4 9.8 9.8s-4.4 9.8-9.8 9.8S2.2 17.4 2.2 12 6.6 2.2 12 2.2zm0 2.8c-1.3 0-2.5.3-3.5.8l1.7 1.7c.5-.2 1.1-.3 1.8-.3 2.7 0 4.9 2.2 4.9 4.9h2.5c0-4.1-3.3-7.4-7.4-7.4zm-5.7.8L4.9 8.1l2.4 2.4V8.8zm11.4 0v1.7l2.4-2.4-1.4-1.4-2.4 2.4V8.8zM7.5 11.5c0 2.7 2.2 4.9 4.9 4.9.7 0 1.3-.1 1.8-.3l1.7 1.7c-1 .5-2.2.8-3.5.8-4.1 0-7.4-3.3-7.4-7.4h2.5zm7.8 2.4l2.4 2.4 1.4-1.4-2.4-2.4-1.4 1.4z"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">Provider</span>
+                    <span class="tech-version">状态管理</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">Go Router</span>
+                    <span class="tech-version">路由管理</span>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-logo">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <span class="tech-name">FL Chart</span>
+                    <span class="tech-version">图表库</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="#" class="footer-logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span class="logo-text">StepUp</span>
+                    </a>
+                    <p class="footer-description">
+                        让综测管理更简单
+                    </p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>产品</h4>
+                        <ul>
+                            <li><a href="#features">功能特性</a></li>
+                            <li><a href="#download">下载</a></li>
+                            <li><a href="#tech">技术栈</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4>资源</h4>
+                        <ul>
+                            <li><a href="https://gitee.com/LeoAndJellyfish/StepUp" target="_blank">Gitee 仓库</a></li>
+                            <li><a href="https://gitee.com/LeoAndJellyfish/StepUp/releases" target="_blank">更新日志</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-column">
+                        <h4>关于</h4>
+                        <ul>
+                            <li><a href="https://gitee.com/LeoAndJellyfish/StepUp/blob/main/LICENCE" target="_blank">许可证</a></li>
+                            <li><a href="https://gitee.com/LeoAndJellyfish/StepUp/issues" target="_blank">问题反馈</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 LeoAndJellyfish. All rights reserved.</p>
+                <p class="footer-license">本项目采用 Apache License 2.0 许可证</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
