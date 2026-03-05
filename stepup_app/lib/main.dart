@@ -14,43 +14,64 @@ import 'providers/theme_provider.dart';
 void main() async {
   // 确保Flutter绑定初始化
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 初始化pdfrx
-  pdfrxFlutterInitialize();
-  
-  // 在桌面平台上初始化FFI数据库
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-  
-  // 为Windows平台设置UI样式
-  if (Platform.isWindows) {
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-      ),
+
+  try {
+    // 初始化pdfrx
+    pdfrxFlutterInitialize();
+
+    // 在桌面平台上初始化FFI数据库
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    // 为Windows平台设置UI样式
+    if (Platform.isWindows) {
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+        ),
+      );
+    }
+
+    // 初始化应用数据，添加超时保护
+    await _initializeApp().timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw Exception('应用初始化超时，请检查以下问题：\n'
+            '1. 磁盘是否有足够空间\n'
+            '2. 是否有写入权限\n'
+            '3. 杀毒软件是否阻止了应用运行');
+      },
     );
+
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    // 捕获所有初始化错误，显示错误页面
+    debugPrint('应用初始化失败: $e');
+    debugPrint('堆栈跟踪: $stackTrace');
+    runApp(ErrorApp(error: e.toString(), stackTrace: stackTrace.toString()));
   }
-  
+}
+
+/// 初始化应用数据
+Future<void> _initializeApp() async {
   // 初始化数据库
   final databaseHelper = DatabaseHelper();
   await databaseHelper.database; // 这会触发数据库创建或升级
-  
+
   // 迁移现有的证明材料文件到应用data目录
   final fileManager = FileManager();
   await fileManager.migrateProofMaterials();
-  
+
   // 检查是否存在用户
   final userDao = UserDao();
   final hasUser = await userDao.hasUsers();
-  
+
   // 设置初始路由
   if (!hasUser) {
     AppRouter.setInitialRoute('/welcome');
   }
-  
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -83,6 +104,169 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// 错误提示页面
+/// 当应用初始化失败时显示，帮助用户诊断问题
+class ErrorApp extends StatelessWidget {
+  final String error;
+  final String stackTrace;
+
+  const ErrorApp({
+    super.key,
+    required this.error,
+    required this.stackTrace,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'StepUp - 启动错误',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        useMaterial3: true,
+      ),
+      home: ErrorPage(error: error, stackTrace: stackTrace),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+/// 错误详情页面
+class ErrorPage extends StatelessWidget {
+  final String error;
+  final String stackTrace;
+
+  const ErrorPage({
+    super.key,
+    required this.error,
+    required this.stackTrace,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('应用启动失败'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '抱歉，应用无法正常启动',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '这可能是由以下原因导致的：',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            _buildSuggestionItem('1. 磁盘空间不足', '请确保系统盘有至少 100MB 的可用空间'),
+            _buildSuggestionItem('2. 权限问题', '请尝试以管理员身份运行应用'),
+            _buildSuggestionItem('3. 杀毒软件拦截', '请将本应用添加到杀毒软件的白名单中'),
+            _buildSuggestionItem('4. 数据文件损坏', '尝试删除应用目录下的 data 文件夹后重新启动'),
+            const SizedBox(height: 24),
+            const Text(
+              '错误详情：',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    error,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  // 尝试重新启动应用
+                  _restartApp();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('重试'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionItem(String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.arrow_right, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _restartApp() {
+    // 简单的重新加载方式
+    // 在实际生产环境中，可能需要使用更复杂的方式重启应用
+    exit(0);
   }
 }
 
@@ -124,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // by the _incrementCounter method above.
     //
     // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
+    // fast, so you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
@@ -133,7 +317,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
+        // the App.build method, and used to set our appbar title.
         title: Text(widget.title),
       ),
       body: Center(
