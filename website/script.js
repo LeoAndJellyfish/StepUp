@@ -1,5 +1,5 @@
 // Version configuration - Update this when pubspec.yaml changes
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.4.1';
 
 document.addEventListener('DOMContentLoaded', function() {
     updateVersionDisplay();

@@ -3,9 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
-import 'package:sqlite3/open.dart';
-import 'dart:ffi';
 import 'dart:io';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -24,20 +21,6 @@ void main() async {
 
     // 在桌面平台上初始化FFI数据库
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      // 应用 sqlite3_flutter_libs 提供的动态库
-      await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-      // Windows 平台需要加载 sqlite3.dll
-      if (Platform.isWindows) {
-        try {
-          final script = File(Platform.script.toFilePath());
-          final libraryNextToScript = File('${script.parent.path}/sqlite3.dll');
-          if (libraryNextToScript.existsSync()) {
-            open.overrideForAll(() => DynamicLibrary.open(libraryNextToScript.path));
-          }
-        } catch (e) {
-          debugPrint('加载本地 sqlite3.dll 失败，将使用系统库: $e');
-        }
-      }
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
