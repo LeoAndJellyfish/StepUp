@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -16,7 +18,16 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final databasesPath = await getDatabasesPath();
+    // 使用应用支持目录，避免权限问题
+    final appDir = await getApplicationSupportDirectory();
+    final databasesPath = appDir.path;
+    
+    // 确保目录存在
+    final dir = Directory(databasesPath);
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    
     final path = join(databasesPath, 'stepup.db');
 
     return await openDatabase(
