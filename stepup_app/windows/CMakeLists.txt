@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.14)
 project(stepup_app LANGUAGES CXX)
 
+# 静态链接 MSVC 运行时库，避免用户电脑缺少 VCRUNTIME140.dll
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "stepup_app")
