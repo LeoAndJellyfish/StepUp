@@ -88,6 +88,50 @@ class _ClassificationSchemesPageState extends State<ClassificationSchemesPage> {
     }
   }
 
+  Future<void> _duplicateScheme(ClassificationScheme scheme) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('复制分类方案'),
+        content: Text('确定要复制「${scheme.name}」吗？\n\n将创建一个包含相同分类结构的新方案。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _schemeDao.duplicateScheme(scheme.id!);
+        await _loadSchemes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已复制分类方案'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('复制失败: $e'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _deleteScheme(ClassificationScheme scheme) async {
     if (scheme.isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -385,6 +429,8 @@ class _ClassificationSchemesPageState extends State<ClassificationSchemesPage> {
                     onSelected: (value) {
                       if (value == 'activate') {
                         _setActiveScheme(scheme);
+                      } else if (value == 'duplicate') {
+                        _duplicateScheme(scheme);
                       } else if (value == 'delete') {
                         _deleteScheme(scheme);
                       }
@@ -401,6 +447,16 @@ class _ClassificationSchemesPageState extends State<ClassificationSchemesPage> {
                             ],
                           ),
                         ),
+                      const PopupMenuItem(
+                        value: 'duplicate',
+                        child: Row(
+                          children: [
+                            Icon(Icons.copy_outlined),
+                            SizedBox(width: 8),
+                            Text('复制'),
+                          ],
+                        ),
+                      ),
                       if (!scheme.isDefault)
                         const PopupMenuItem(
                           value: 'delete',

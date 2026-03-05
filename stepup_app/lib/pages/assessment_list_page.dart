@@ -774,7 +774,7 @@ class _AssessmentListPageState extends State<AssessmentListPage>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('将导出所有条目的证明材料，并按条目名称重命名后打包：'),
+              const Text('请选择导出方式：'),
               const SizedBox(height: 16),
               Text('• 总条目数：${stats['totalItems']} 个'),
               Text('• 有证明材料的条目：${stats['itemsWithProof']} 个'),
@@ -804,14 +804,27 @@ class _AssessmentListPageState extends State<AssessmentListPage>
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('取消'),
               ),
-              FilledButton(
+              // 按分类导出按钮
+              FilledButton.icon(
+                onPressed: (stats['itemsWithProof'] ?? 0) > 0
+                    ? () {
+                        Navigator.of(context).pop();
+                        _startExportByCategory();
+                      }
+                    : null,
+                icon: const Icon(Icons.folder_copy, size: 18),
+                label: const Text('按分类导出'),
+              ),
+              // 普通导出按钮
+              FilledButton.icon(
                 onPressed: (stats['itemsWithProof'] ?? 0) > 0
                     ? () {
                         Navigator.of(context).pop();
                         _startExport();
                       }
                     : null,
-                child: const Text('开始导出'),
+                icon: const Icon(Icons.folder_zip, size: 18),
+                label: const Text('普通导出'),
               ),
             ] else
               const TextButton(
@@ -867,6 +880,72 @@ class _AssessmentListPageState extends State<AssessmentListPage>
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('已导出所有证明材料: ${outputPath.split('\\').last}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: '查看位置',
+              onPressed: () {
+                _showExportSuccessDialog(outputPath);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('导出失败: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportProgress = 0.0;
+          _exportMessage = '';
+        });
+      }
+    }
+  }
+
+  void _startExportByCategory() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    if (!mounted) return;
+
+    setState(() {
+      _isExporting = true;
+      _exportProgress = 0.0;
+      _exportMessage = '准备导出...';
+    });
+
+    try {
+      final outputPath = await _exportService.exportAllProofMaterialsByCategory(
+        progressCallback: (progress, message) {
+          if (mounted) {
+            setState(() {
+              _exportProgress = progress;
+              _exportMessage = message;
+            });
+
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                    '导出进度: ${(progress * 100).toStringAsFixed(1)}% - $message'),
+                duration: const Duration(milliseconds: 500),
+              ),
+            );
+          }
+        },
+      );
+
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('已按分类导出所有证明材料: ${outputPath.split('\\').last}'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
             action: SnackBarAction(

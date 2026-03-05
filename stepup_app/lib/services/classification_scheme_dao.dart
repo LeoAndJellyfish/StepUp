@@ -1,5 +1,9 @@
 import '../models/classification_scheme.dart';
+import '../models/category.dart';
+import '../models/subcategory.dart';
 import 'database_helper.dart';
+import 'category_dao.dart';
+import 'subcategory_dao.dart';
 
 class ClassificationSchemeDao {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
@@ -132,5 +136,76 @@ class ClassificationSchemeDao {
     );
     
     return items.first['count'] as int;
+  }
+
+  /// 复制分类方案及其所有分类和子分类
+  /// 返回新创建的方案ID
+  Future<int> duplicateScheme(int schemeId, {String? newName, String? newCode}) async {
+    final categoryDao = CategoryDao();
+    final subcategoryDao = SubcategoryDao();
+    
+    // 获取原方案
+    final originalScheme = await getSchemeById(schemeId);
+    if (originalScheme == null) {
+      throw Exception('分类方案不存在');
+    }
+    
+    // 生成新名称和编码
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final name = newName ?? '${originalScheme.name} (副本)';
+    final code = newCode ?? '${originalScheme.code}_copy_$timestamp';
+    
+    // 创建新方案
+    final newScheme = ClassificationScheme(
+      name: name,
+      code: code,
+      description: originalScheme.description,
+      isActive: false, // 复制方案默认不激活
+      isDefault: false, // 复制方案不能是默认方案
+      source: 'manual',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    
+    final newSchemeId = await insertScheme(newScheme);
+    
+    // 获取原方案的所有分类
+    final categories = await categoryDao.getCategoriesBySchemeId(schemeId);
+    
+    // 复制分类和子分类
+    for (final category in categories) {
+      // 创建新分类
+      final newCategory = Category(
+        schemeId: newSchemeId,
+        name: category.name,
+        code: category.code,
+        description: category.description,
+        color: category.color,
+        icon: category.icon,
+        createdAt: DateTime.now(),
+      );
+      
+      final newCategoryId = await categoryDao.insertCategory(newCategory);
+      
+      // 获取原分类的所有子分类
+      if (category.id != null) {
+        final subcategories = await subcategoryDao.getSubcategoriesByCategoryId(category.id!);
+        
+        // 复制子分类
+        for (final subcategory in subcategories) {
+          final newSubcategory = Subcategory(
+            categoryId: newCategoryId,
+            name: subcategory.name,
+            code: subcategory.code,
+            description: subcategory.description,
+            createdAt: DateTime.now(),
+          );
+          
+          await subcategoryDao.insertSubcategory(newSubcategory);
+        }
+      }
+    }
+    
+    return newSchemeId;
   }
 }

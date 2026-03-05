@@ -2,7 +2,7 @@
 ; 生成命令: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
 #define MyAppName "StepUp"
-#define MyAppVersion "1.4.1"
+#define MyAppVersion "1.4.2"
 #define MyAppPublisher "StepUp"
 #define MyAppExeName "stepup_app.exe"
 #define MyAppAssocName MyAppName + " File"

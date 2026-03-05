@@ -347,6 +347,190 @@ class ProofMaterialsExportService {
            '${dateTime.second.toString().padLeft(2, '0')}';
   }
 
+  /// 按分类导出所有条目的证明材料
+  /// [outputPath] 导出文件路径（可选，默认为下载目录）
+  /// [progressCallback] 进度回调函数
+  /// 返回导出文件的完整路径
+  /// 
+  /// 文件结构：
+  /// 压缩包.zip
+  /// ├── 分类A/
+  /// │   ├── 条目1/
+  /// │   │   ├── 条目信息.txt
+  /// │   │   ├── 图片_01.jpg
+  /// │   │   └── 文档_01.pdf
+  /// │   └── 条目2/
+  /// │       └── ...
+  /// ├── 分类B/
+  /// │   └── ...
+  Future<String> exportAllProofMaterialsByCategory({
+    String? outputPath,
+    ExportProgressCallback? progressCallback,
+  }) async {
+    progressCallback?.call(0.0, '正在准备导出...');
+
+    try {
+      // 1. 获取所有条目
+      progressCallback?.call(0.1, '正在获取条目数据...');
+      final items = await _assessmentItemDao.getAllItems();
+
+      if (items.isEmpty) {
+        throw Exception('没有找到任何条目');
+      }
+
+      // 2. 获取分类信息
+      progressCallback?.call(0.2, '正在获取分类信息...');
+      final categories = await _categoryDao.getAllCategories();
+      final subcategories = await _subcategoryDao.getAllSubcategories();
+
+      // 3. 创建临时目录用于整理文件
+      progressCallback?.call(0.3, '正在创建工作目录...');
+      final tempDir = await Directory.systemTemp.createTemp('stepup_export_by_category_');
+
+      try {
+        // 4. 按分类整理文件到临时目录
+        await _organizeFilesByCategoryToTempDirectory(
+          items,
+          categories,
+          subcategories,
+          tempDir,
+          progressCallback,
+        );
+
+        // 5. 创建ZIP文件
+        progressCallback?.call(0.8, '正在创建压缩包...');
+        final outputFilePath = await _createZipFileByCategory(tempDir, outputPath);
+
+        progressCallback?.call(1.0, '导出完成');
+        return outputFilePath;
+      } finally {
+        // 清理临时目录
+        try {
+          await tempDir.delete(recursive: true);
+        } catch (e) {
+          debugPrint('清理临时目录失败: $e');
+        }
+      }
+    } catch (e) {
+      progressCallback?.call(0.0, '导出失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 按分类整理文件到临时目录
+  Future<void> _organizeFilesByCategoryToTempDirectory(
+    List<AssessmentItem> items,
+    List<app_models.Category> categories,
+    List<Subcategory> subcategories,
+    Directory tempDir,
+    ExportProgressCallback? progressCallback,
+  ) async {
+    int processedItems = 0;
+    int totalItems = items.length;
+
+    // 创建分类名称到条目的映射，用于处理重名
+    final Map<String, int> categoryNameCount = {};
+    final Map<int, String> categoryIdToFolderName = {};
+
+    // 预先生成分类文件夹名称
+    for (final category in categories) {
+      String folderName = _sanitizeFileName(category.name);
+      if (categoryNameCount.containsKey(folderName)) {
+        categoryNameCount[folderName] = categoryNameCount[folderName]! + 1;
+        folderName = '${folderName}_${categoryNameCount[folderName]}';
+      } else {
+        categoryNameCount[folderName] = 1;
+      }
+      if (category.id != null) {
+        categoryIdToFolderName[category.id!] = folderName;
+      }
+    }
+
+    for (final item in items) {
+      try {
+        // 获取条目的文件附件
+        final attachments = await _fileAttachmentDao.getAttachmentsByItemId(item.id!);
+
+        if (attachments.isEmpty) {
+          // 检查旧版本的imagePath和filePath字段
+          if (item.imagePath == null && item.filePath == null) {
+            processedItems++;
+            continue;
+          }
+        }
+
+        // 获取分类文件夹名称
+        final categoryFolderName = categoryIdToFolderName[item.categoryId] ?? '未分类';
+
+        // 创建分类目录
+        final categoryDir = Directory(path.join(tempDir.path, categoryFolderName));
+        await categoryDir.create(recursive: true);
+
+        // 创建条目专用目录（在分类目录下）
+        final itemDirName = _sanitizeFileName(item.title);
+        final itemDir = Directory(path.join(categoryDir.path, itemDirName));
+        await itemDir.create(recursive: true);
+
+        // 复制附件文件
+        await _copyAttachmentsToItemDirectory(item, attachments, itemDir);
+
+        // 创建条目信息文件
+        await _createItemInfoFile(item, categories, subcategories, itemDir);
+      } catch (e) {
+        debugPrint('处理条目 ${item.title} 时出错: $e');
+      }
+
+      processedItems++;
+      final progress = 0.3 + (0.5 * processedItems / totalItems);
+      progressCallback?.call(progress, '正在处理条目: ${item.title}');
+    }
+  }
+
+  /// 创建按分类组织的ZIP文件
+  Future<String> _createZipFileByCategory(Directory tempDir, String? outputPath) async {
+    final timestamp = DateTime.now();
+    final dateStr = '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}';
+    final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}';
+
+    // 获取用户名（如果存在）
+    String userNamePart = '';
+    try {
+      final user = await _userDao.getFirstUser();
+      if (user != null && user.name.isNotEmpty) {
+        userNamePart = '${user.name}_';
+      }
+    } catch (e) {
+      debugPrint('获取用户名失败: $e');
+    }
+
+    // 创建包含用户名的文件名
+    final fileName = 'StepUp证明材料_按分类_$userNamePart${dateStr}_$timeStr.zip';
+
+    String finalOutputPath;
+    if (outputPath != null) {
+      finalOutputPath = path.join(outputPath, fileName);
+    } else {
+      // 默认保存到应用文档目录
+      final documentsDir = await getApplicationDocumentsDirectory();
+      finalOutputPath = path.join(documentsDir.path, fileName);
+    }
+
+    // 创建归档
+    final archive = Archive();
+
+    // 递归添加目录中的所有文件
+    await _addDirectoryToArchive(tempDir, archive, '');
+
+    // 编码为ZIP
+    final zipData = ZipEncoder().encode(archive);
+
+    // 写入文件
+    final outputFile = File(finalOutputPath);
+    await outputFile.writeAsBytes(zipData);
+
+    return finalOutputPath;
+  }
+
   /// 获取统计信息
   Future<Map<String, int>> getExportStatistics() async {
     final items = await _assessmentItemDao.getAllItems();
