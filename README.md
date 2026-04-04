@@ -1,7 +1,7 @@
 # StepUp 综合测评系统
 
 ![Platform](https://img.shields.io/badge/platform-Flutter-blue)
-[![Version](https://img.shields.io/badge/version-1.4.5-green)](https://github.com/LeoAndJellyfish/StepUp/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.5.0-green)](https://github.com/LeoAndJellyfish/StepUp/releases/latest)
 [![License](https://img.shields.io/badge/license-Custom%20License-red)](https://github.com/LeoAndJellyfish/StepUp/blob/main/LICENCE)
 [![Build Status](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml/badge.svg)](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml)
 
