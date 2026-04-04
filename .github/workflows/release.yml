@@ -1,0 +1,77 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+          channel: 'stable'
+
+      - name: Verify Flutter installation
+        run: |
+          flutter --version
+          flutter doctor -v
+
+      - name: Get dependencies
+        working-directory: stepup_app
+        run: flutter pub get
+
+      - name: Build Windows
+        working-directory: stepup_app
+        run: flutter build windows --release
+
+      - name: Build Android APK
+        working-directory: stepup_app
+        run: flutter build apk --release
+
+      - name: Package release files
+        working-directory: stepup_app
+        run: python scripts/package.py ${{ github.ref_name }} --platforms=windows,android
+        env:
+          PYTHONIOENCODING: utf-8
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: stepup_app/releases/${{ github.ref_name }}/*
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: ./release-files
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release-files/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
