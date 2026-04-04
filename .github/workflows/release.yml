@@ -5,13 +5,14 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
+env:
+  FLUTTER_VERSION: '3.41.6'
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
-    
+    env:
+      PYTHONIOENCODING: utf-8
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,13 +20,14 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.6'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
+          cache: true
 
-      - name: Verify Flutter installation
-        run: |
-          flutter --version
-          flutter doctor -v
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Get dependencies
         working-directory: stepup_app
@@ -35,42 +37,109 @@ jobs:
         working-directory: stepup_app
         run: flutter build windows --release
 
-      - name: Build Android APK
+      - name: Package Windows
         working-directory: stepup_app
-        run: flutter build apk --release
+        run: python scripts/package.py ${{ github.ref_name }} --platforms=windows
 
-      - name: Package release files
-        working-directory: stepup_app
-        run: python scripts/package.py ${{ github.ref_name }} --platforms=windows,android
-        env:
-          PYTHONIOENCODING: utf-8
-
-      - name: Upload build artifacts
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-files
-          path: stepup_app/releases/${{ github.ref_name }}/*
+          name: windows-build
+          path: stepup_app/releases/${{ github.ref_name }}/*.zip
           retention-days: 1
 
-  release:
-    needs: build
+  build-android:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download build artifacts
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get dependencies
+        working-directory: stepup_app
+        run: flutter pub get
+
+      - name: Build Android APK
+        working-directory: stepup_app
+        run: flutter build apk --release
+
+      - name: Package Android
+        working-directory: stepup_app
+        run: python scripts/package.py ${{ github.ref_name }} --platforms=android
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: stepup_app/releases/${{ github.ref_name }}/*.apk
+          retention-days: 1
+
+  create-release:
+    needs: [build-windows, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-files
-          path: ./release-files
+          name: windows-build
+          path: artifacts/windows
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-build
+          path: artifacts/android
+
+      - name: List artifacts
+        run: |
+          echo "Windows artifacts:"
+          ls -la artifacts/windows/ || echo "No Windows artifacts"
+          echo ""
+          echo "Android artifacts:"
+          ls -la artifacts/android/ || echo "No Android artifacts"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: ./release-files/*
-          generate_release_notes: true
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## StepUp ${{ github.ref_name }}
+            
+            ### 下载
+            
+            | 平台 | 文件 |
+            | --- | --- |
+            | Windows 便携版 | 见下方 `*_windows_portable.zip` |
+            | Android | 见下方 `*_android.apk` |
+            
+            ### 更新日志
+            
+            请查看 [commits](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) 了解详细更改。
+          files: |
+            artifacts/windows/*
+            artifacts/android/*
           draft: false
           prerelease: false
         env:
