@@ -316,7 +316,7 @@ function initInteractions() {
 function initConsoleEasterEgg() {
     console.log('%c StepUp ', 'background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-size: 24px; font-weight: bold; padding: 10px 20px; border-radius: 8px;');
     console.log('%c 让综测管理更简单 🎓 ', 'color: #6366f1; font-size: 14px;');
-    console.log('%c 访问我们的 Gitee 仓库: https://gitee.com/LeoAndJellyfish/StepUp ', 'color: #22c55e; font-size: 12px;');
+    console.log('%c 访问我们的 GitHub 仓库: https://github.com/LeoAndJellyfish/StepUp ', 'color: #22c55e; font-size: 12px;');
 }
 
 const debounce = (func, wait) => {
