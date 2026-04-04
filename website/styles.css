@@ -128,7 +128,7 @@ body::before {
 .logo-icon {
     width: 48px;
     height: 48px;
-    background: var(--primary);
+    background: white;
     border: var(--border-thick);
     border-radius: var(--radius-md);
     display: flex;
@@ -144,7 +144,8 @@ body::before {
     box-shadow: var(--shadow-hard);
 }
 
-.logo-icon svg {
+.logo-icon svg,
+.logo-icon img {
     width: 24px;
     height: 24px;
 }
@@ -1071,7 +1072,7 @@ body::before {
 }
 
 .footer-logo .logo-icon {
-    background: var(--primary);
+    background: white;
 }
 
 .footer-description {
