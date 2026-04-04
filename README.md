@@ -1,6 +1,6 @@
 # StepUp 综合测评系统
 
-[![Version](https://img.shields.io/badge/version-1.4.2-green)](https://github.com/LeoAndJellyfish/StepUp/releases)
+[![Version](https://img.shields.io/badge/version-1.4.3-green)](https://github.com/LeoAndJellyfish/StepUp/releases)
 [![Build Status](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml/badge.svg)](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml)
 
 一个功能强大的Flutter应用，专门为大学生设计，用于清晰有序地管理综合测评条目。
