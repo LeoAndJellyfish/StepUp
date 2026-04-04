@@ -1,6 +1,8 @@
 # StepUp 综合测评系统
 
-[![Version](https://img.shields.io/badge/version-1.4.5-green)](https://github.com/LeoAndJellyfish/StepUp/releases)
+![Platform](https://img.shields.io/badge/platform-Flutter-blue)
+[![Version](https://img.shields.io/badge/version-1.4.5-green)](https://github.com/LeoAndJellyfish/StepUp/releases/latest)
+[![License](https://img.shields.io/badge/license-Custom%20License-red)](https://github.com/LeoAndJellyfish/StepUp/blob/main/LICENCE)
 [![Build Status](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml/badge.svg)](https://github.com/LeoAndJellyfish/StepUp/actions/workflows/release.yml)
 
 一个功能强大的Flutter应用，专门为大学生设计，用于清晰有序地管理综合测评条目。
@@ -31,14 +33,6 @@ StepUp是一款专为中央财经大学（CUFE）学生设计的综合测评管�
 - **报表生成**：支持多种格式的数据导出
 - **版本管理**：完善的数据备份和恢复机制
 
-## 🚀 AI评分功能（规划中）
-
-### 🤖 智能评分系统
-- **自动评分引擎**：AI根据评分标准自动计算分数
-- **文档解析**：支持PDF、Word等格式的评分标准自动识别
-- **智能分类计分**：针对不同维度采用不同的评分策略
-- **问卷生成**：AI自动生成针对性问卷辅助主观评价
-
 ## 🛠️ 技术栈
 
 - **前端框架**：Flutter 3.9.0+
@@ -48,57 +42,6 @@ StepUp是一款专为中央财经大学（CUFE）学生设计的综合测评管�
 - **UI组件**：Material Design + Cupertino
 - **图表库**：FL Chart
 
-## 📦 项目结构
-
-```
-stepup_app/
-├── lib/
-│   ├── main.dart              # 应用入口
-│   ├── models/               # 数据模型
-│   ├── pages/                # 页面组件
-│   ├── router/               # 路由配置
-│   ├── services/             # 业务服务
-│   ├── theme/                # 主题配置
-│   └── widgets/              # 通用组件
-├── android/                  # Android平台配置
-├── ios/                      # iOS平台配置
-├── windows/                  # Windows平台配置
-├── macos/                    # macOS平台配置
-├── linux/                    # Linux平台配置
-└── web/                      # Web平台配置
-```
-
-## 🎯 开发状态
-
-### ✅ 已完成功能
-- 基础框架搭建
-- 数据库设计与实现
-- 综测条目增删改查
-- 文件管理功能
-- 数据统计可视化
-- 多平台适配
-
-### 🔄 开发中功能
-- AI评分系统（规划阶段）
-- 云端同步功能
-- 高级数据导出
-
-## 📥 安装与运行
-
-### 系统要求
-- Flutter SDK 3.9.0+
-- Dart SDK
-- 各平台对应的开发环境
-
-### 运行步骤
-1. 克隆项目到本地
-2. 进入 `stepup_app` 目录
-3. 运行 `flutter pub get` 安装依赖
-4. 运行 `flutter run` 启动应用
-
-### Windows用户注意
-本软件需要Microsoft Visual C++ Redistributable支持，如无法打开软件，请自行在微软官方网页下载安装：
-https://learn.microsoft.com/zh-cn/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version
 
 ## 📱 支持平台
 
