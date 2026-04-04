@@ -29,6 +29,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+
       - name: Get dependencies
         working-directory: stepup_app
         run: flutter pub get
@@ -39,13 +43,15 @@ jobs:
 
       - name: Package Windows
         working-directory: stepup_app
-        run: python scripts/package.py ${{ github.ref_name }} --platforms=windows
+        run: python scripts/package.py ${{ github.ref_name }} --platforms=windows,installer
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: stepup_app/releases/${{ github.ref_name }}/*.zip
+          path: |
+            stepup_app/releases/${{ github.ref_name }}/*.zip
+            stepup_app/releases/${{ github.ref_name }}/*.exe
           retention-days: 1
 
   build-android:
@@ -131,6 +137,7 @@ jobs:
             
             | 平台 | 文件 |
             | --- | --- |
+            | Windows 安装版 | 见下方 `*_windows_installer.exe` |
             | Windows 便携版 | 见下方 `*_windows_portable.zip` |
             | Android | 见下方 `*_android.apk` |
             
